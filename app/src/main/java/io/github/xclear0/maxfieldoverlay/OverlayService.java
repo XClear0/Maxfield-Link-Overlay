@@ -17,6 +17,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.Button;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -137,18 +138,26 @@ public final class OverlayService extends Service {
     }
 
     private View buildOverlayView() {
-        LinearLayout container = new LinearLayout(this);
-        container.setOrientation(LinearLayout.HORIZONTAL);
+        FrameLayout container = new FrameLayout(this);
 
-        minimizedBar = new View(this);
-        minimizedBar.setBackground(Ui.background(Ui.ACCENT, 8, this));
-        minimizedBar.setVisibility(View.GONE);
-        minimizedBar.setOnClickListener(v -> expand());
-        container.addView(minimizedBar, new LinearLayout.LayoutParams(
-                Ui.dp(this, 12), Ui.dp(this, 120)));
+        // 创建最小化状态的视图 (4dp 视觉条，位于 28dp 宽度的感应区中心)
+        FrameLayout barContainer = new FrameLayout(this);
+        barContainer.setVisibility(View.GONE);
+        barContainer.setOnClickListener(v -> expand());
+
+        View bar = new View(this);
+        bar.setBackground(Ui.background(Ui.ACCENT, 4, this));
+        FrameLayout.LayoutParams barParams = new FrameLayout.LayoutParams(
+                Ui.dp(this, 4), Ui.dp(this, 120));
+        barParams.gravity = Gravity.CENTER;
+        barContainer.addView(bar, barParams);
+
+        minimizedBar = barContainer;
+        container.addView(minimizedBar, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
         contentView = buildContentView();
-        container.addView(contentView, new LinearLayout.LayoutParams(
+        container.addView(contentView, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         return container;
@@ -175,10 +184,18 @@ public final class OverlayService extends Service {
         header.addView(progressView, new LinearLayout.LayoutParams(
                 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
+        TextView minimize = Ui.text(this, "—", 20, Ui.SECONDARY);
+        minimize.setGravity(Gravity.CENTER);
+        minimize.setContentDescription("收起悬浮窗");
+        minimize.setPadding(Ui.dp(this, 12), 0, Ui.dp(this, 6), 0);
+        minimize.setOnClickListener(view -> minimize());
+        header.addView(minimize, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
         TextView close = Ui.text(this, "×", 25, Ui.SECONDARY);
         close.setGravity(Gravity.CENTER);
         close.setContentDescription("关闭悬浮窗");
-        close.setPadding(Ui.dp(this, 12), 0, 0, 0);
+        close.setPadding(Ui.dp(this, 6), 0, 0, 0);
         close.setOnClickListener(view -> stopOverlay());
         header.addView(close, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -236,7 +253,7 @@ public final class OverlayService extends Service {
         isMinimized = true;
         contentView.setVisibility(View.GONE);
         minimizedBar.setVisibility(View.VISIBLE);
-        windowParams.width = Ui.dp(this, 12);
+        windowParams.width = Ui.dp(this, 28); // 扩大物理点击区域
         windowManager.updateViewLayout(overlay, windowParams);
     }
 
@@ -332,11 +349,6 @@ public final class OverlayService extends Service {
                         return true;
                     case MotionEvent.ACTION_UP:
                     case MotionEvent.ACTION_CANCEL:
-                        int currentScreenWidth = getResources().getDisplayMetrics().widthPixels;
-                        int threshold = Ui.dp(OverlayService.this, 10);
-                        if (windowParams.x <= threshold || windowParams.x >= currentScreenWidth - windowParams.width - threshold) {
-                            minimize();
-                        }
                         PlanRepository.savePosition(
                                 OverlayService.this, windowParams.x, windowParams.y);
                         return true;
