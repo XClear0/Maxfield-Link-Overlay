@@ -8,7 +8,6 @@ import android.app.Service;
 import android.content.Intent;
 import android.graphics.PixelFormat;
 import android.graphics.Typeface;
-import android.os.Build;
 import android.os.IBinder;
 import android.provider.Settings;
 import android.view.Gravity;
@@ -65,9 +64,11 @@ public final class OverlayService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         String action = intent == null ? ACTION_SHOW : intent.getAction();
-        if (ACTION_STOP.equals(action)) {
-            stopOverlay();
-            return START_NOT_STICKY;
+        switch (action) {
+            case ACTION_STOP -> {
+                stopOverlay();
+                return START_NOT_STICKY;
+            }
         }
 
         startForeground(NOTIFICATION_ID, buildNotification(null));
@@ -300,12 +301,10 @@ public final class OverlayService extends Service {
         }
         index = Math.max(0, Math.min(index, steps.size() - 1));
         LinkStep step = steps.get(index);
-        progressView.setText("拖动  ·  LINK " + step.linkNumber + "  ·  "
-                + (index + 1) + "/" + steps.size());
-        agentView.setText("AGENT " + step.agentNumber);
-        originView.setText("起点  #" + step.originNumber + "\n" + step.originName);
-        destinationView.setText(
-                "终点  #" + step.destinationNumber + "\n" + step.destinationName);
+        progressView.setText(getString(R.string.overlay_progress, step.linkNumber, index + 1, steps.size()));
+        agentView.setText(getString(R.string.overlay_agent, step.agentNumber));
+        originView.setText(getString(R.string.overlay_origin, step.originNumber, step.originName));
+        destinationView.setText(getString(R.string.overlay_destination, step.destinationNumber, step.destinationName));
         previousButton.setEnabled(index > 0);
         previousButton.setAlpha(index > 0 ? 1f : 0.35f);
         nextButton.setEnabled(index < steps.size() - 1);
@@ -327,13 +326,15 @@ public final class OverlayService extends Service {
                     return false;
                 }
                 switch (event.getActionMasked()) {
-                    case MotionEvent.ACTION_DOWN:
+                    case MotionEvent.ACTION_DOWN -> {
+                        view.performClick();
                         initialX = windowParams.x;
                         initialY = windowParams.y;
                         initialTouchX = event.getRawX();
                         initialTouchY = event.getRawY();
                         return true;
-                    case MotionEvent.ACTION_MOVE:
+                    }
+                    case MotionEvent.ACTION_MOVE -> {
                         int proposedX = initialX + Math.round(event.getRawX() - initialTouchX);
                         int proposedY = initialY + Math.round(event.getRawY() - initialTouchY);
                         int screenWidth = getResources().getDisplayMetrics().widthPixels;
@@ -347,13 +348,15 @@ public final class OverlayService extends Service {
                                 Math.min(proposedY, screenHeight - Ui.dp(OverlayService.this, 64)));
                         windowManager.updateViewLayout(overlay, windowParams);
                         return true;
-                    case MotionEvent.ACTION_UP:
-                    case MotionEvent.ACTION_CANCEL:
+                    }
+                    case MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                         PlanRepository.savePosition(
                                 OverlayService.this, windowParams.x, windowParams.y);
                         return true;
-                    default:
+                    }
+                    default -> {
                         return false;
+                    }
                 }
             }
         };
@@ -415,7 +418,10 @@ public final class OverlayService extends Service {
                 .setOngoing(true)
                 .setOnlyAlertOnce(true)
                 .setCategory(Notification.CATEGORY_SERVICE)
-                .addAction(0, getString(R.string.notification_stop), stopPending)
+                .addAction(new Notification.Action.Builder(
+                        android.graphics.drawable.Icon.createWithResource(this, R.drawable.ic_link),
+                        getString(R.string.notification_stop),
+                        stopPending).build())
                 .build();
     }
 }

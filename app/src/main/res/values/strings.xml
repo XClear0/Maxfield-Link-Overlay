@@ -4,4 +4,12 @@
     <string name="notification_channel_description">在游戏上方持续显示当前 Maxfield Link</string>
     <string name="notification_title">Maxfield Link 悬浮窗运行中</string>
     <string name="notification_stop">关闭悬浮窗</string>
+    <string name="plan_status_none">尚未导入规划</string>
+    <string name="plan_status_count">%1$s\n%2$d 条 Link</string>
+    <string name="preview_placeholder">导入后将在这里预览第一条 Link</string>
+    <string name="preview_current_step">当前 %1$d / %2$d  ·  Agent %3$d\n#%4$d  %5$s\n↓\n#%6$d  %7$s</string>
+    <string name="overlay_progress">拖动  ·  LINK %1$d  ·  %2$d/%3$d</string>
+    <string name="overlay_agent">AGENT %1$d</string>
+    <string name="overlay_origin">起点  #%1$d\n%2$s</string>
+    <string name="overlay_destination">终点  #%1$d\n%2$s</string>
 </resources>

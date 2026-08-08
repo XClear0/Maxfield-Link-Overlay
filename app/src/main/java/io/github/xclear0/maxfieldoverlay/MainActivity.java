@@ -12,7 +12,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.provider.OpenableColumns;
 import android.provider.Settings;
-import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowInsets;
@@ -90,7 +89,8 @@ public final class MainActivity extends Activity {
             });
         }
 
-        TextView eyebrow = Ui.text(this, "INGRESS OPERATION TOOL", 12, Ui.ACCENT);
+        TextView eyebrow = Ui.text(this, """
+                INGRESS OPERATION TOOL""", 12, Ui.ACCENT);
         eyebrow.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         eyebrow.setLetterSpacing(0.12f);
         root.addView(eyebrow);
@@ -180,12 +180,13 @@ public final class MainActivity extends Activity {
 
         TextView tips = Ui.text(
                 this,
-                "支持文件\n"
-                        + "• agent_assignments.txt（推荐，多 Agent 总顺序）\n"
-                        + "• agent_N_assignment.txt（只看某位 Agent）\n"
-                        + "• agent_assignments.csv\n\n"
-                        + "悬浮窗顶部可拖动；上一条/下一条会自动保存当前位置。"
-                        + "切回本应用可重置进度或关闭悬浮窗。",
+                """
+                        支持文件
+                        • agent_assignments.txt（推荐，多 Agent 总顺序）
+                        • agent_N_assignment.txt（只看某位 Agent）
+                        • agent_assignments.csv
+
+                        悬浮窗顶部可拖动；上一条/下一条会自动保存当前位置。切回本应用可重置进度或关闭悬浮窗。""",
                 14,
                 Ui.SECONDARY);
         LinearLayout.LayoutParams tipsParams = fullWidth();
@@ -321,18 +322,16 @@ public final class MainActivity extends Activity {
         }
         PlanRepository.PlanData plan = PlanRepository.loadPlan(this);
         if (plan.steps.isEmpty()) {
-            planStatus.setText("尚未导入规划");
-            preview.setText("导入后将在这里预览第一条 Link");
+            planStatus.setText(R.string.plan_status_none);
+            preview.setText(R.string.preview_placeholder);
         } else {
             int index = PlanRepository.getIndex(this, plan.steps.size());
             LinkStep step = plan.steps.get(index);
-            planStatus.setText(plan.displayName + "\n" + plan.steps.size() + " 条 Link");
-            preview.setText(
-                    "当前 " + (index + 1) + " / " + plan.steps.size()
-                            + "  ·  Agent " + step.agentNumber + "\n"
-                            + "#" + step.originNumber + "  " + step.originName + "\n"
-                            + "↓\n"
-                            + "#" + step.destinationNumber + "  " + step.destinationName);
+            planStatus.setText(getString(R.string.plan_status_count, plan.displayName, plan.steps.size()));
+            preview.setText(getString(R.string.preview_current_step,
+                    index + 1, plan.steps.size(), step.agentNumber,
+                    step.originNumber, step.originName,
+                    step.destinationNumber, step.destinationName));
         }
 
         boolean permission = Settings.canDrawOverlays(this);
