@@ -10,6 +10,7 @@ import android.graphics.PixelFormat;
 import android.graphics.Typeface;
 import android.os.IBinder;
 import android.provider.Settings;
+import android.view.GestureDetector;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
@@ -48,7 +49,9 @@ public final class OverlayService extends Service {
     private boolean isMinimized;
     private View contentView;
     private View minimizedBar;
+    private View visualBar;
     private int expandedWidth;
+    private boolean isDraggingMinimized;
 
     static boolean isRunning() {
         return running;
@@ -144,16 +147,17 @@ public final class OverlayService extends Service {
         // 创建最小化状态的视图 (4dp 视觉条，位于 28dp 宽度的感应区中心)
         FrameLayout barContainer = new FrameLayout(this);
         barContainer.setVisibility(View.GONE);
-        barContainer.setOnClickListener(v -> expand());
 
-        View bar = new View(this);
-        bar.setBackground(Ui.background(Ui.ACCENT, 4, this));
+        visualBar = new View(this);
+        visualBar.setBackground(Ui.background(Ui.ACCENT, 4, this));
         FrameLayout.LayoutParams barParams = new FrameLayout.LayoutParams(
                 Ui.dp(this, 4), Ui.dp(this, 120));
         barParams.gravity = Gravity.CENTER;
-        barContainer.addView(bar, barParams);
+        barContainer.addView(visualBar, barParams);
 
         minimizedBar = barContainer;
+        minimizedBar.setOnTouchListener(minimizedTouchListener());
+
         container.addView(minimizedBar, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
@@ -254,8 +258,34 @@ public final class OverlayService extends Service {
         isMinimized = true;
         contentView.setVisibility(View.GONE);
         minimizedBar.setVisibility(View.VISIBLE);
-        windowParams.width = Ui.dp(this, 28); // 扩大物理点击区域
+
+        windowParams.width = Ui.dp(this, 48); // 扩大物理点击区域 (从 28dp 到 48dp)
+
+        snapToEdge();
         windowManager.updateViewLayout(overlay, windowParams);
+    }
+
+    private void snapToEdge() {
+        int screenWidth = getResources().getDisplayMetrics().widthPixels;
+        int barWidth = windowParams.width;
+
+        // 计算距离左边还是右边更近
+        if (windowParams.x + barWidth / 2 < screenWidth / 2) {
+            windowParams.x = 0;
+            updateVisualBarGravity(Gravity.START);
+        } else {
+            windowParams.x = screenWidth - barWidth;
+            updateVisualBarGravity(Gravity.END);
+        }
+        PlanRepository.savePosition(this, windowParams.x, windowParams.y);
+    }
+
+    private void updateVisualBarGravity(int gravity) {
+        if (visualBar != null) {
+            FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) visualBar.getLayoutParams();
+            lp.gravity = gravity | Gravity.CENTER_VERTICAL;
+            visualBar.setLayoutParams(lp);
+        }
     }
 
     private void expand() {
@@ -264,7 +294,90 @@ public final class OverlayService extends Service {
         minimizedBar.setVisibility(View.GONE);
         contentView.setVisibility(View.VISIBLE);
         windowParams.width = expandedWidth;
+
+        // 展开时如果太靠右可能会出屏，简单处理一下
+        int screenWidth = getResources().getDisplayMetrics().widthPixels;
+        if (windowParams.x + expandedWidth > screenWidth) {
+            windowParams.x = screenWidth - expandedWidth;
+        }
+
         windowManager.updateViewLayout(overlay, windowParams);
+        PlanRepository.savePosition(this, windowParams.x, windowParams.y);
+    }
+
+    private View.OnTouchListener minimizedTouchListener() {
+        GestureDetector gestureDetector = new GestureDetector(this, new GestureDetector.SimpleOnGestureListener() {
+            @Override
+            public boolean onSingleTapConfirmed(MotionEvent e) {
+                if (minimizedBar != null) {
+                    minimizedBar.performClick();
+                }
+                expand();
+                return true;
+            }
+
+            @Override
+            public void onLongPress(MotionEvent e) {
+                isDraggingMinimized = true;
+            }
+        });
+
+        return new View.OnTouchListener() {
+            private int initialX;
+            private int initialY;
+            private float initialTouchX;
+            private float initialTouchY;
+
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                gestureDetector.onTouchEvent(event);
+
+                switch (event.getActionMasked()) {
+                    case MotionEvent.ACTION_DOWN -> {
+                        initialX = windowParams.x;
+                        initialY = windowParams.y;
+                        initialTouchX = event.getRawX();
+                        initialTouchY = event.getRawY();
+                        return true;
+                    }
+                    case MotionEvent.ACTION_MOVE -> {
+                        if (isDraggingMinimized) {
+                            int proposedX = initialX + Math.round(event.getRawX() - initialTouchX);
+                            int proposedY = initialY + Math.round(event.getRawY() - initialTouchY);
+                            int screenWidth = getResources().getDisplayMetrics().widthPixels;
+                            int screenHeight = getResources().getDisplayMetrics().heightPixels;
+
+                            windowParams.x = Math.max(0, Math.min(proposedX, screenWidth - windowParams.width));
+                            windowParams.y = Math.max(0, Math.min(proposedY, screenHeight - Ui.dp(OverlayService.this, 64)));
+
+                            windowManager.updateViewLayout(overlay, windowParams);
+                        } else {
+                            // 滑动展开逻辑: 从边缘向内滑动超过阈值即展开
+                            float deltaX = event.getRawX() - initialTouchX;
+                            int threshold = Ui.dp(OverlayService.this, 30);
+                            int screenWidth = getResources().getDisplayMetrics().widthPixels;
+
+                            boolean isAtLeft = windowParams.x <= 0;
+                            boolean isAtRight = windowParams.x >= screenWidth - windowParams.width;
+
+                            if ((isAtLeft && deltaX > threshold) || (isAtRight && deltaX < -threshold)) {
+                                expand();
+                            }
+                        }
+                        return true;
+                    }
+                    case MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                        if (isDraggingMinimized) {
+                            isDraggingMinimized = false;
+                            snapToEdge();
+                            windowManager.updateViewLayout(overlay, windowParams);
+                        }
+                        return true;
+                    }
+                }
+                return false;
+            }
+        };
     }
 
     private TextView portalView(int accentColor) {
