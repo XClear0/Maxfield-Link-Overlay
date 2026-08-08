@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Maxfield Link Overlay</string>
+    <string name="notification_channel_name">Maxfield 悬浮窗</string>
+    <string name="notification_channel_description">在游戏上方持续显示当前 Maxfield Link</string>
+    <string name="notification_title">Maxfield Link 悬浮窗运行中</string>
+    <string name="notification_stop">关闭悬浮窗</string>
+</resources>
