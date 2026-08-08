@@ -45,6 +45,11 @@ public final class OverlayService extends Service {
     private List<LinkStep> steps = Collections.emptyList();
     private int index;
 
+    private boolean isMinimized;
+    private View contentView;
+    private View minimizedBar;
+    private int expandedWidth;
+
     static boolean isRunning() {
         return running;
     }
@@ -105,11 +110,11 @@ public final class OverlayService extends Service {
 
     private void showOverlay() {
         overlay = buildOverlayView();
-        int width = Math.min(
+        expandedWidth = Math.min(
                 Ui.dp(this, 330),
                 getResources().getDisplayMetrics().widthPixels - Ui.dp(this, 24));
         windowParams = new WindowManager.LayoutParams(
-                width,
+                expandedWidth,
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
@@ -132,6 +137,24 @@ public final class OverlayService extends Service {
     }
 
     private View buildOverlayView() {
+        LinearLayout container = new LinearLayout(this);
+        container.setOrientation(LinearLayout.HORIZONTAL);
+
+        minimizedBar = new View(this);
+        minimizedBar.setBackground(Ui.background(Ui.ACCENT, 8, this));
+        minimizedBar.setVisibility(View.GONE);
+        minimizedBar.setOnClickListener(v -> expand());
+        container.addView(minimizedBar, new LinearLayout.LayoutParams(
+                Ui.dp(this, 12), Ui.dp(this, 120)));
+
+        contentView = buildContentView();
+        container.addView(contentView, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        return container;
+    }
+
+    private View buildContentView() {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(
@@ -206,6 +229,24 @@ public final class OverlayService extends Service {
         controls.addView(nextButton, nextParams);
 
         return root;
+    }
+
+    private void minimize() {
+        if (isMinimized || overlay == null) return;
+        isMinimized = true;
+        contentView.setVisibility(View.GONE);
+        minimizedBar.setVisibility(View.VISIBLE);
+        windowParams.width = Ui.dp(this, 12);
+        windowManager.updateViewLayout(overlay, windowParams);
+    }
+
+    private void expand() {
+        if (!isMinimized || overlay == null) return;
+        isMinimized = false;
+        minimizedBar.setVisibility(View.GONE);
+        contentView.setVisibility(View.VISIBLE);
+        windowParams.width = expandedWidth;
+        windowManager.updateViewLayout(overlay, windowParams);
     }
 
     private TextView portalView(int accentColor) {
@@ -291,6 +332,11 @@ public final class OverlayService extends Service {
                         return true;
                     case MotionEvent.ACTION_UP:
                     case MotionEvent.ACTION_CANCEL:
+                        int currentScreenWidth = getResources().getDisplayMetrics().widthPixels;
+                        int threshold = Ui.dp(OverlayService.this, 10);
+                        if (windowParams.x <= threshold || windowParams.x >= currentScreenWidth - windowParams.width - threshold) {
+                            minimize();
+                        }
                         PlanRepository.savePosition(
                                 OverlayService.this, windowParams.x, windowParams.y);
                         return true;

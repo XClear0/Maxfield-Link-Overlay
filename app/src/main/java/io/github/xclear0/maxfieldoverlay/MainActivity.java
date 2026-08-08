@@ -16,9 +16,9 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowInsets;
+import android.view.WindowInsetsController;
 import android.widget.Button;
 import android.widget.LinearLayout;
-import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -41,9 +41,27 @@ public final class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        getWindow().setStatusBarColor(Ui.BACKGROUND);
-        getWindow().setNavigationBarColor(Ui.BACKGROUND);
         setContentView(buildContent());
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            getWindow().setDecorFitsSystemWindows(false);
+            WindowInsetsController controller = getWindow().getInsetsController();
+            if (controller != null) {
+                controller.hide(WindowInsets.Type.statusBars() | WindowInsets.Type.navigationBars());
+                controller.setSystemBarsBehavior(WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+            }
+        } else {
+            getWindow().getDecorView().setSystemUiVisibility(
+                    View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                            | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                            | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                            | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                            | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                            | View.SYSTEM_UI_FLAG_FULLSCREEN);
+        }
+
+        getWindow().setStatusBarColor(android.graphics.Color.TRANSPARENT);
+        getWindow().setNavigationBarColor(android.graphics.Color.TRANSPARENT);
     }
 
     @Override
@@ -57,23 +75,17 @@ public final class MainActivity extends Activity {
     }
 
     private View buildContent() {
-        ScrollView scroll = new ScrollView(this);
-        scroll.setFillViewport(true);
-        scroll.setBackgroundColor(Ui.BACKGROUND);
-
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
+        root.setBackgroundColor(Ui.BACKGROUND);
         int horizontal = Ui.dp(this, 20);
-        int vertical = Ui.dp(this, 24);
+        int vertical = Ui.dp(this, 14);
         root.setPadding(horizontal, vertical, horizontal, vertical);
-        scroll.addView(root, new ScrollView.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             root.setOnApplyWindowInsetsListener((view, insets) -> {
-                android.graphics.Insets bars = insets.getInsets(
-                        WindowInsets.Type.statusBars() | WindowInsets.Type.navigationBars());
-                view.setPadding(horizontal, vertical + bars.top, horizontal, vertical + bars.bottom);
+                android.graphics.Insets cutout = insets.getInsets(WindowInsets.Type.displayCutout());
+                view.setPadding(horizontal, vertical + cutout.top, horizontal, vertical + cutout.bottom);
                 return insets;
             });
         }
@@ -83,24 +95,24 @@ public final class MainActivity extends Activity {
         eyebrow.setLetterSpacing(0.12f);
         root.addView(eyebrow);
 
-        TextView title = Ui.text(this, "Maxfield\nLink Overlay", 34, Ui.PRIMARY);
+        TextView title = Ui.text(this, "Maxfield\nLink Overlay", 28, Ui.PRIMARY);
         title.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         LinearLayout.LayoutParams titleParams = fullWidth();
-        titleParams.topMargin = Ui.dp(this, 8);
+        titleParams.topMargin = Ui.dp(this, 4);
         root.addView(title, titleParams);
 
         TextView description = Ui.text(
                 this,
                 "导入 Maxfield 的行动清单，在游戏上方逐条显示 Link 起点和终点。",
-                16,
+                14,
                 Ui.SECONDARY);
         LinearLayout.LayoutParams descriptionParams = fullWidth();
-        descriptionParams.topMargin = Ui.dp(this, 12);
+        descriptionParams.topMargin = Ui.dp(this, 6);
         root.addView(description, descriptionParams);
 
         LinearLayout planCard = card();
         LinearLayout.LayoutParams planCardParams = fullWidth();
-        planCardParams.topMargin = Ui.dp(this, 24);
+        planCardParams.topMargin = Ui.dp(this, 12);
         root.addView(planCard, planCardParams);
 
         TextView planLabel = sectionLabel("1  导入规划");
@@ -118,9 +130,9 @@ public final class MainActivity extends Activity {
         importParams.topMargin = Ui.dp(this, 16);
         planCard.addView(importButton, importParams);
 
-        preview = Ui.text(this, "", 14, Ui.PRIMARY);
+        preview = Ui.text(this, "", 13, Ui.PRIMARY);
         preview.setBackground(Ui.background(Ui.BACKGROUND, 10, this));
-        preview.setPadding(Ui.dp(this, 14), Ui.dp(this, 12), Ui.dp(this, 14), Ui.dp(this, 12));
+        preview.setPadding(Ui.dp(this, 12), Ui.dp(this, 8), Ui.dp(this, 12), Ui.dp(this, 8));
         LinearLayout.LayoutParams previewParams = fullWidth();
         previewParams.topMargin = Ui.dp(this, 12);
         planCard.addView(preview, previewParams);
@@ -139,7 +151,7 @@ public final class MainActivity extends Activity {
 
         LinearLayout overlayCard = card();
         LinearLayout.LayoutParams overlayCardParams = fullWidth();
-        overlayCardParams.topMargin = Ui.dp(this, 16);
+        overlayCardParams.topMargin = Ui.dp(this, 8);
         root.addView(overlayCard, overlayCardParams);
 
         overlayCard.addView(sectionLabel("2  开启悬浮窗"));
@@ -177,23 +189,23 @@ public final class MainActivity extends Activity {
                 14,
                 Ui.SECONDARY);
         LinearLayout.LayoutParams tipsParams = fullWidth();
-        tipsParams.topMargin = Ui.dp(this, 20);
+        tipsParams.topMargin = Ui.dp(this, 10);
         root.addView(tips, tipsParams);
 
-        return scroll;
+        return root;
     }
 
     private LinearLayout card() {
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
         card.setPadding(
-                Ui.dp(this, 18), Ui.dp(this, 18), Ui.dp(this, 18), Ui.dp(this, 18));
-        card.setBackground(Ui.background(Ui.SURFACE, 18, this));
+                Ui.dp(this, 14), Ui.dp(this, 12), Ui.dp(this, 14), Ui.dp(this, 12));
+        card.setBackground(Ui.background(Ui.SURFACE, 16, this));
         return card;
     }
 
     private TextView sectionLabel(String text) {
-        TextView label = Ui.text(this, text, 18, Ui.PRIMARY);
+        TextView label = Ui.text(this, text, 16, Ui.PRIMARY);
         label.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         return label;
     }
