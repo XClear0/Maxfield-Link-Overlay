@@ -2,6 +2,27 @@ plugins {
     id 'com.android.application'
 }
 
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file('keystore.properties')
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.withInputStream { keystoreProperties.load(it) }
+}
+
+def releaseStoreFile = System.getenv('RELEASE_STORE_FILE')
+        ?: keystoreProperties.getProperty('storeFile')
+def releaseStorePassword = System.getenv('RELEASE_STORE_PASSWORD')
+        ?: keystoreProperties.getProperty('storePassword')
+def releaseKeyAlias = System.getenv('RELEASE_KEY_ALIAS')
+        ?: keystoreProperties.getProperty('keyAlias')
+def releaseKeyPassword = System.getenv('RELEASE_KEY_PASSWORD')
+        ?: keystoreProperties.getProperty('keyPassword')
+def releaseSigningConfigured = [
+        releaseStoreFile,
+        releaseStorePassword,
+        releaseKeyAlias,
+        releaseKeyPassword
+].every { it != null && !it.isBlank() }
+
 android {
     namespace 'io.github.xclear0.maxfieldoverlay'
     compileSdk 36
@@ -11,14 +32,28 @@ android {
         applicationId 'io.github.xclear0.maxfieldoverlay'
         minSdk 26
         targetSdk 36
-        versionCode 1
-        versionName '1.0.0'
+        versionCode 2
+        versionName '1.1.0'
 
         testInstrumentationRunner 'android.test.InstrumentationTestRunner'
     }
 
+    signingConfigs {
+        release {
+            if (releaseSigningConfigured) {
+                storeFile rootProject.file(releaseStoreFile)
+                storePassword releaseStorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
+            if (releaseSigningConfigured) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
@@ -32,4 +67,21 @@ android {
 
 dependencies {
     testImplementation 'junit:junit:4.13.2'
+}
+
+tasks.register('verifyReleaseSigning') {
+    doLast {
+        if (!releaseSigningConfigured) {
+            throw new GradleException('Release signing is not configured. Set RELEASE_* environment variables or keystore.properties.')
+        }
+        if (!rootProject.file(releaseStoreFile).isFile()) {
+            throw new GradleException("Release keystore does not exist: ${releaseStoreFile}")
+        }
+    }
+}
+
+tasks.configureEach { task ->
+    if (task.name == 'packageRelease') {
+        task.dependsOn tasks.named('verifyReleaseSigning')
+    }
 }

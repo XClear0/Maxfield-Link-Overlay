@@ -51,6 +51,49 @@ app/build/outputs/apk/debug/app-debug.apk
 adb install -r .\app\build\outputs\apk\debug\app-debug.apk
 ```
 
+## GitHub 自动发布
+
+推送格式为 `v主版本.次版本.修订号` 的标签后，GitHub Actions 会自动执行单元测试、构建签名 APK、生成
+SHA-256 校验文件并创建 GitHub Release。标签版本必须与 `app/build.gradle` 中的 `versionName` 一致。
+
+首次使用前，需要创建发布 keystore，并在仓库的 Actions Secrets 中配置以下四项：
+
+- `RELEASE_KEYSTORE_BASE64`
+- `RELEASE_STORE_PASSWORD`
+- `RELEASE_KEY_ALIAS`
+- `RELEASE_KEY_PASSWORD`
+
+本地 `keystore.properties` 的格式如下；该文件和 `*.jks` 已被 Git 忽略：
+
+```properties
+storeFile=.signing/maxfield-overlay-release.jks
+storePassword=你的-keystore-密码
+keyAlias=maxfield-overlay
+keyPassword=你的-key-密码
+```
+
+可以使用项目脚本生成高强度随机密码和新的发布密钥（脚本发现现有密钥时会拒绝覆盖）：
+
+```powershell
+.\scripts\create-release-keystore.ps1
+```
+
+登录 GitHub CLI 后，可用脚本将这些值安全写入当前仓库的 Actions Secrets：
+
+```powershell
+gh auth login --hostname github.com --web
+.\scripts\configure-github-secrets.ps1
+```
+
+发布新版本时，先递增 `versionCode` 并修改 `versionName`，提交并推送，然后创建同版本标签。例如：
+
+```powershell
+git tag -a v1.1.0 -m "Maxfield Link Overlay v1.1.0"
+git push origin v1.1.0
+```
+
+不要删除或重新生成发布 keystore；后续更新必须继续使用同一套签名密钥。
+
 ## 权限说明
 
 - `SYSTEM_ALERT_WINDOW`：在游戏上方显示可交互悬浮窗；

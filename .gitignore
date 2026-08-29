@@ -5,6 +5,7 @@
 /build/
 /app/build/
 /app/release/
+/.signing/
 local.properties
 keystore.properties
 *.jks
