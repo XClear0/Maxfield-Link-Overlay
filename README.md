@@ -9,6 +9,7 @@ Maxfield 已生成的 Link 行动清单，并在其他应用上方显示当前 L
 - 支持 `agent_assignments.txt`、`agent_N_assignment.txt` 和
   `agent_assignments.csv`；
 - 显示 Link 编号、总进度、Agent、起点 Portal 和终点 Portal；
+- 当前 Link 起点与上一条不同时，浮窗整体变色提示；
 - 在半透明悬浮窗中切换上一条/下一条 Link；
 - 拖动悬浮窗并保存位置；
 - 自动保存当前 Link 进度，重新打开后继续；

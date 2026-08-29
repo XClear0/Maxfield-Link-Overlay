@@ -173,7 +173,7 @@ public final class OverlayService extends Service {
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(
                 Ui.dp(this, 14), Ui.dp(this, 10), Ui.dp(this, 14), Ui.dp(this, 14));
-        root.setBackground(Ui.background(0xF017232E, 18, this));
+        root.setBackground(Ui.background(Ui.OVERLAY_SURFACE, 18, this));
 
         LinearLayout header = new LinearLayout(this);
         header.setGravity(Gravity.CENTER_VERTICAL);
@@ -414,6 +414,7 @@ public final class OverlayService extends Service {
         }
         index = Math.max(0, Math.min(index, steps.size() - 1));
         LinkStep step = steps.get(index);
+        applyOriginChangeAppearance(LinkProgress.hasOriginChanged(steps, index));
         progressView.setText(getString(R.string.overlay_progress, step.linkNumber, index + 1, steps.size()));
         agentView.setText(getString(R.string.overlay_agent, step.agentNumber));
         originView.setText(getString(R.string.overlay_origin, step.originNumber, step.originName));
@@ -424,6 +425,19 @@ public final class OverlayService extends Service {
         nextButton.setAlpha(index < steps.size() - 1 ? 1f : 0.35f);
         getSystemService(NotificationManager.class).notify(
                 NOTIFICATION_ID, buildNotification(step));
+    }
+
+    private void applyOriginChangeAppearance(boolean originChanged) {
+        int surfaceColor = originChanged
+                ? Ui.ORIGIN_CHANGE_SURFACE
+                : Ui.OVERLAY_SURFACE;
+        int accentColor = originChanged
+                ? Ui.ORIGIN_CHANGE_ACCENT
+                : Ui.ACCENT;
+
+        contentView.setBackground(Ui.background(surfaceColor, 18, this));
+        progressView.setTextColor(accentColor);
+        visualBar.setBackground(Ui.background(accentColor, 4, this));
     }
 
     private View.OnTouchListener dragListener() {

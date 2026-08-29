@@ -12,6 +12,9 @@ final class Ui {
     static final int SURFACE = 0xFF17232E;
     static final int SURFACE_LIGHT = 0xFF213342;
     static final int ACCENT = 0xFF2ED6C3;
+    static final int OVERLAY_SURFACE = 0xF017232E;
+    static final int ORIGIN_CHANGE_SURFACE = 0xF0682F17;
+    static final int ORIGIN_CHANGE_ACCENT = 0xFFFFC857;
     static final int PRIMARY = 0xFFF4F7FA;
     static final int SECONDARY = 0xFFAABBC8;
     static final int ORIGIN = 0xFF65D1FF;
