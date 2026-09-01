@@ -1,0 +1,3 @@
+* Added the new colored-pencil adaptive launcher icon.
+* Added the Apache License 2.0 license.
+* Enabled unsigned release builds for source-based distribution systems such as F-Droid.

@@ -1,0 +1,3 @@
+* 使用新的彩色铅笔风格自适应图标。
+* 添加 Apache License 2.0 开源许可。
+* 支持生成供 F-Droid 等源码分发系统签名的未签名 Release APK。

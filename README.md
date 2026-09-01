@@ -90,8 +90,8 @@ gh auth login --hostname github.com --web
 发布新版本时，先递增 `versionCode` 并修改 `versionName`，提交并推送，然后创建同版本标签。例如：
 
 ```powershell
-git tag -a v1.1.0 -m "Maxfield Link Overlay v1.1.0"
-git push origin v1.1.0
+git tag -a v1.2.0 -m "Maxfield Link Overlay v1.2.0"
+git push origin v1.2.0
 ```
 
 不要删除或重新生成发布 keystore；后续更新必须继续使用同一套签名密钥。
