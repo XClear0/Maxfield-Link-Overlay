@@ -69,7 +69,7 @@ jobs:
         shell: bash
         run: |
           chmod +x gradlew
-          ./gradlew testDebugUnitTest assembleRelease
+          ./gradlew verifyReleaseSigning testDebugUnitTest assembleRelease
 
       - name: Prepare release assets
         shell: bash

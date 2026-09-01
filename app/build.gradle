@@ -79,9 +79,3 @@ tasks.register('verifyReleaseSigning') {
         }
     }
 }
-
-tasks.configureEach { task ->
-    if (task.name == 'packageRelease') {
-        task.dependsOn tasks.named('verifyReleaseSigning')
-    }
-}

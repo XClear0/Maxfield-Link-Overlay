@@ -6,4 +6,4 @@
 
 The Android adaptive icon places the transparent colored-pencil foreground over a pure-white background with an 8 dp safe inset. A simplified compass, five-portal network, and active-link arrow are supplied as a separate monochrome vector for Android themed icons.
 
-The selected source was generated with the built-in `imagegen` tool in edit mode. Its prompt set is recorded in `concepts-colored-pencil-faction-correct/sample-5-variants/README.md`.
+The selected source was generated with the built-in `imagegen` tool in edit mode, then mechanically resized and background-separated for its store and adaptive-icon outputs. The final artwork and derived icon assets are distributed with the rest of this project under Apache License 2.0.

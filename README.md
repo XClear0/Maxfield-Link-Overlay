@@ -51,6 +51,8 @@ app/build/outputs/apk/debug/app-debug.apk
 adb install -r .\app\build\outputs\apk\debug\app-debug.apk
 ```
 
+没有配置发布 keystore 时，`assembleRelease` 会生成未签名 Release APK，供 F-Droid 等源码构建系统自行签名。GitHub Actions 发布流程会在构建前显式运行 `verifyReleaseSigning`，因此仍会拒绝缺少发布签名凭据的正式 GitHub Release。
+
 ## GitHub 自动发布
 
 推送格式为 `v主版本.次版本.修订号` 的标签后，GitHub Actions 会自动执行单元测试、构建签名 APK、生成
@@ -101,6 +103,15 @@ git push origin v1.1.0
 - `POST_NOTIFICATIONS`：显示悬浮窗运行状态和关闭操作。
 
 应用没有声明网络权限。
+
+## 许可证
+
+本项目的源代码及随附图像资产采用 [Apache License 2.0](LICENSE) 许可：
+
+```text
+Copyright 2026 XClear0
+SPDX-License-Identifier: Apache-2.0
+```
 
 ## 验证
 
