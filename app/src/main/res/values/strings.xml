@@ -12,4 +12,7 @@
     <string name="overlay_agent">AGENT %1$d</string>
     <string name="overlay_origin">起点  #%1$d\n%2$s</string>
     <string name="overlay_destination">终点  #%1$d\n%2$s</string>
+    <string name="privacy_policy">隐私政策</string>
+    <string name="privacy_policy_description">在浏览器中打开 Maxfield Link Overlay 隐私政策</string>
+    <string name="privacy_policy_unavailable">无法打开隐私政策，请稍后重试</string>
 </resources>

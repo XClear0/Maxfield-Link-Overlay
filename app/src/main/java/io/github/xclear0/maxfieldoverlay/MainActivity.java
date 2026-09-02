@@ -6,6 +6,7 @@ import android.content.ContentResolver;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
+import android.graphics.Paint;
 import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Build;
@@ -18,6 +19,7 @@ import android.view.WindowInsets;
 import android.view.WindowInsetsController;
 import android.widget.Button;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -29,6 +31,8 @@ public final class MainActivity extends Activity {
     private static final int REQUEST_PLAN = 40;
     private static final int REQUEST_OVERLAY = 41;
     private static final int REQUEST_NOTIFICATIONS = 42;
+    private static final String PRIVACY_POLICY_URL =
+            "https://xclear0.github.io/Maxfield-Link-Overlay/privacy.html";
 
     private TextView planStatus;
     private TextView preview;
@@ -193,7 +197,32 @@ public final class MainActivity extends Activity {
         tipsParams.topMargin = Ui.dp(this, 10);
         root.addView(tips, tipsParams);
 
-        return root;
+        TextView privacyLink = Ui.text(this, getString(R.string.privacy_policy), 14, Ui.ACCENT);
+        privacyLink.setPaintFlags(privacyLink.getPaintFlags() | Paint.UNDERLINE_TEXT_FLAG);
+        privacyLink.setContentDescription(getString(R.string.privacy_policy_description));
+        privacyLink.setOnClickListener(view -> openPrivacyPolicy());
+        LinearLayout.LayoutParams privacyParams = fullWidth();
+        privacyParams.topMargin = Ui.dp(this, 12);
+        privacyParams.bottomMargin = Ui.dp(this, 8);
+        root.addView(privacyLink, privacyParams);
+
+        ScrollView scrollView = new ScrollView(this);
+        scrollView.setBackgroundColor(Ui.BACKGROUND);
+        scrollView.setFillViewport(true);
+        scrollView.addView(
+                root,
+                new ScrollView.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT));
+        return scrollView;
+    }
+
+    private void openPrivacyPolicy() {
+        try {
+            startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(PRIVACY_POLICY_URL)));
+        } catch (RuntimeException error) {
+            Toast.makeText(this, R.string.privacy_policy_unavailable, Toast.LENGTH_LONG).show();
+        }
     }
 
     private LinearLayout card() {

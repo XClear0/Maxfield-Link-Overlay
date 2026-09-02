@@ -1,0 +1,5 @@
+LinkNum, Agent, OriginNum, OriginName, DestinationNum, DestinationName
+1, 1, 1, Central Library, 2, Riverside Park
+2, 1, 1, Central Library, 3, City Museum
+3, 1, 4, North Station, 2, Riverside Park
+4, 1, 4, North Station, 5, Market Square

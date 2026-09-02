@@ -90,11 +90,30 @@ gh auth login --hostname github.com --web
 发布新版本时，先递增 `versionCode` 并修改 `versionName`，提交并推送，然后创建同版本标签。例如：
 
 ```powershell
-git tag -a v1.2.0 -m "Maxfield Link Overlay v1.2.0"
-git push origin v1.2.0
+git tag -a v1.2.1 -m "Maxfield Link Overlay v1.2.1"
+git push origin v1.2.1
 ```
 
 不要删除或重新生成发布 keystore；后续更新必须继续使用同一套签名密钥。
+
+## Google Play 发布
+
+已准备 Google Play 所需的中英文商店文案、512 × 512 图标、1024 × 500 Feature Graphic、
+4 张 1080 × 1920 手机截图、隐私政策、Data safety 填写建议和前台服务声明模板。完整清单见
+[`store-assets/google-play/README.md`](store-assets/google-play/README.md)。
+
+使用已配置的发布密钥生成可上传的 Android App Bundle：
+
+```powershell
+$env:ANDROID_HOME="$env:LOCALAPPDATA\Android\Sdk"
+.\gradlew.bat verifyReleaseSigning bundleRelease
+```
+
+AAB 输出到 `app/build/outputs/bundle/release/app-release.aab`。首次上传前应确定 Play App Signing
+是否沿用现有应用签名密钥；将构建包上传到内部测试轨道后，再完成 Console 中的内容声明和审核。
+
+应用内隐私政策链接指向 `https://xclear0.github.io/Maxfield-Link-Overlay/privacy.html`。
+上传 Play 之前，必须提交 `docs/` 并在 GitHub 仓库设置中启用 Pages，确保该网址可公开访问。
 
 ## 权限说明
 

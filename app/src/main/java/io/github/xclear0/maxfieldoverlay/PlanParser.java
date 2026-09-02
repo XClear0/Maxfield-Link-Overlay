@@ -8,6 +8,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -72,7 +73,7 @@ public final class PlanParser {
     }
 
     private static boolean looksLikeCsv(String text) {
-        String firstLine = text.split("\\R", 2)[0].toLowerCase();
+        String firstLine = text.split("\\R", 2)[0].toLowerCase(Locale.ROOT);
         return firstLine.contains("linknum") && firstLine.contains("originname");
     }
 
@@ -114,7 +115,7 @@ public final class PlanParser {
         List<LinkStep> result = new ArrayList<>();
         for (String rawLine : text.split("\\R")) {
             String line = removeBom(rawLine).trim();
-            if (line.isEmpty() || line.toLowerCase().startsWith("linknum")) {
+            if (line.isEmpty() || line.toLowerCase(Locale.ROOT).startsWith("linknum")) {
                 continue;
             }
 
