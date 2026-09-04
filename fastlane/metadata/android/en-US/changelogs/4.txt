@@ -1,3 +1,4 @@
 * Added an in-app Privacy Policy link for Google Play distribution.
 * Disabled cloud backup of imported plans and saved progress.
 * Added Google Play listing and policy materials.
+* Hardened Gradle Wrapper integrity verification for reproducible source builds.
