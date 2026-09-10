@@ -76,14 +76,14 @@ public final class OverlayService extends Service {
 
         startForeground(NOTIFICATION_ID, buildNotification(null));
         if (!Settings.canDrawOverlays(this)) {
-            Toast.makeText(this, "悬浮窗权限已被关闭", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, R.string.overlay_permission_revoked, Toast.LENGTH_LONG).show();
             stopOverlay();
             return START_NOT_STICKY;
         }
 
         reloadPlan();
         if (steps.isEmpty()) {
-            Toast.makeText(this, "没有可显示的 Link", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, R.string.overlay_no_links, Toast.LENGTH_LONG).show();
             stopOverlay();
             return START_NOT_STICKY;
         }
@@ -136,7 +136,10 @@ public final class OverlayService extends Service {
         } catch (RuntimeException error) {
             overlay = null;
             running = false;
-            Toast.makeText(this, "无法创建悬浮窗：" + error.getMessage(), Toast.LENGTH_LONG).show();
+            Toast.makeText(
+                    this,
+                    getString(R.string.overlay_create_failed, error.getMessage()),
+                    Toast.LENGTH_LONG).show();
             stopSelf();
         }
     }
@@ -185,13 +188,13 @@ public final class OverlayService extends Service {
         progressView = Ui.text(this, "", 13, Ui.ACCENT);
         progressView.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         progressView.setLetterSpacing(0.04f);
-        progressView.setContentDescription("拖动悬浮窗");
+        progressView.setContentDescription(getString(R.string.overlay_drag_description));
         header.addView(progressView, new LinearLayout.LayoutParams(
                 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
         TextView minimize = Ui.text(this, "—", 20, Ui.SECONDARY);
         minimize.setGravity(Gravity.CENTER);
-        minimize.setContentDescription("收起悬浮窗");
+        minimize.setContentDescription(getString(R.string.overlay_minimize_description));
         minimize.setPadding(Ui.dp(this, 12), 0, Ui.dp(this, 6), 0);
         minimize.setOnClickListener(view -> minimize());
         header.addView(minimize, new LinearLayout.LayoutParams(
@@ -199,7 +202,7 @@ public final class OverlayService extends Service {
 
         TextView close = Ui.text(this, "×", 25, Ui.SECONDARY);
         close.setGravity(Gravity.CENTER);
-        close.setContentDescription("关闭悬浮窗");
+        close.setContentDescription(getString(R.string.overlay_close_description));
         close.setPadding(Ui.dp(this, 6), 0, 0, 0);
         close.setOnClickListener(view -> stopOverlay());
         header.addView(close, new LinearLayout.LayoutParams(
@@ -234,16 +237,16 @@ public final class OverlayService extends Service {
         controlsParams.topMargin = Ui.dp(this, 12);
         root.addView(controls, controlsParams);
 
-        previousButton = Ui.button(this, "‹  上一条", false);
-        previousButton.setContentDescription("显示上一条 Link");
+        previousButton = Ui.button(this, getString(R.string.overlay_previous), false);
+        previousButton.setContentDescription(getString(R.string.overlay_previous_description));
         previousButton.setOnClickListener(view -> moveBy(-1));
         LinearLayout.LayoutParams previousParams = new LinearLayout.LayoutParams(
                 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
         previousParams.rightMargin = Ui.dp(this, 5);
         controls.addView(previousButton, previousParams);
 
-        nextButton = Ui.button(this, "下一条  ›", true);
-        nextButton.setContentDescription("显示下一条 Link");
+        nextButton = Ui.button(this, getString(R.string.overlay_next), true);
+        nextButton.setContentDescription(getString(R.string.overlay_next_description));
         nextButton.setOnClickListener(view -> moveBy(1));
         LinearLayout.LayoutParams nextParams = new LinearLayout.LayoutParams(
                 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
@@ -534,7 +537,7 @@ public final class OverlayService extends Service {
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
         String detail = step == null
-                ? "正在载入规划…"
+                ? getString(R.string.notification_loading)
                 : step.originName + " → " + step.destinationName;
         return new Notification.Builder(this, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_link)

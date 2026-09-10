@@ -65,7 +65,7 @@ Upload the video to YouTube as unlisted and paste its URL into the Play Console 
 - Phone screenshots: `fastlane/metadata/android/<locale>/images/phoneScreenshots/` (4 images, 1080 × 1920)
 - Localized title and descriptions: `fastlane/metadata/android/<locale>/`
 
-The English listing currently uses screenshots of the app's Chinese interface because the app UI is Chinese. Use `zh-CN` as the default listing so the screenshots accurately represent the installed app.
+The `en-US` and `zh-CN` directories contain matching screenshots for the app's English and Simplified Chinese interfaces.
 
 ## Release bundle
 
@@ -87,4 +87,4 @@ Before the first Play rollout, decide whether Play should use the existing app s
 3. Complete Ads, App access, Data safety, Target audience, Content rating, and Foreground service declarations using the answers above.
 4. Upload the signed AAB to Internal testing first and resolve every Play pre-launch warning.
 5. If this is a personal developer account subject to the testing requirement, run the required closed test before requesting production access.
-6. Add release notes from `fastlane/metadata/android/<locale>/changelogs/4.txt`, choose countries/regions, and submit the rollout for review.
+6. Add release notes from `fastlane/metadata/android/<locale>/changelogs/5.txt`, choose countries/regions, and submit the rollout for review.

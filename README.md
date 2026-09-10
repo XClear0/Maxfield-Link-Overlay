@@ -14,6 +14,7 @@ Maxfield 已生成的 Link 行动清单，并在其他应用上方显示当前 L
 - 拖动悬浮窗并保存位置；
 - 自动保存当前 Link 进度，重新打开后继续；
 - 常驻通知显示当前 Link，并提供关闭入口；
+- 根据系统语言显示英文或简体中文界面；
 - 不联网、不读取游戏账号、不自动操作游戏。
 
 ## 使用方法
@@ -90,8 +91,8 @@ gh auth login --hostname github.com --web
 发布新版本时，先递增 `versionCode` 并修改 `versionName`，提交并推送，然后创建同版本标签。例如：
 
 ```powershell
-git tag -a v1.2.1 -m "Maxfield Link Overlay v1.2.1"
-git push origin v1.2.1
+git tag -a v1.2.2 -m "Maxfield Link Overlay v1.2.2"
+git push origin v1.2.2
 ```
 
 不要删除或重新生成发布 keystore；后续更新必须继续使用同一套签名密钥。

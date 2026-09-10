@@ -62,7 +62,9 @@ final class PlanRepository {
             for (int i = 0; i < array.length(); i++) {
                 steps.add(LinkStep.fromJson(array.getJSONObject(i)));
             }
-            return new PlanData(root.optString("displayName", "Maxfield 规划"), steps);
+            return new PlanData(
+                    root.optString("displayName", context.getString(R.string.default_plan_name)),
+                    steps);
         } catch (FileNotFoundException ignored) {
             return PlanData.empty();
         } catch (IOException | JSONException ignored) {

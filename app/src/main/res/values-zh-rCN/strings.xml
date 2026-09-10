@@ -1,0 +1,50 @@
+<resources>
+    <string name="app_name">Maxfield Link Overlay</string>
+    <string name="notification_channel_name">Maxfield 悬浮窗</string>
+    <string name="notification_channel_description">在游戏上方持续显示当前 Maxfield Link</string>
+    <string name="notification_title">Maxfield Link 悬浮窗运行中</string>
+    <string name="notification_stop">关闭悬浮窗</string>
+    <string name="notification_loading">正在载入规划…</string>
+
+    <string name="main_eyebrow">INGRESS OPERATION TOOL</string>
+    <string name="main_title">Maxfield\nLink Overlay</string>
+    <string name="main_description">导入 Maxfield 的行动清单，在游戏上方逐条显示 Link 起点和终点。</string>
+    <string name="section_import_plan">1  导入规划</string>
+    <string name="plan_status_none">尚未导入规划</string>
+    <string name="plan_status_count">%1$s\n%2$d 条 Link</string>
+    <string name="select_plan_file">选择 Maxfield 规划文件</string>
+    <string name="import_plan_content_description">导入 Maxfield 规划文件</string>
+    <string name="preview_placeholder">导入后将在这里预览第一条 Link</string>
+    <string name="preview_current_step">当前 %1$d / %2$d  ·  Agent %3$d\n#%4$d  %5$s\n↓\n#%6$d  %7$s</string>
+    <string name="reset_to_first_link">从第一条 Link 开始</string>
+    <string name="section_enable_overlay">2  开启悬浮窗</string>
+    <string name="grant_overlay_permission">授予悬浮窗权限</string>
+    <string name="show_over_game">在游戏上方显示</string>
+    <string name="close_overlay">关闭悬浮窗</string>
+    <string name="supported_files_help">支持文件\n• agent_assignments.txt（推荐，多 Agent 总顺序）\n• agent_N_assignment.txt（只看某位 Agent）\n• agent_assignments.csv\n\n悬浮窗顶部可拖动；上一条/下一条会自动保存当前位置。切回本应用可重置进度或关闭悬浮窗。</string>
+    <string name="plan_imported">已导入 %1$d 条 Link</string>
+    <string name="default_plan_name">Maxfield 规划</string>
+    <string name="import_plan_first">请先导入规划文件</string>
+    <string name="overlay_started">悬浮窗已开启，可切换到游戏</string>
+    <string name="overlay_permission_granted">✓ 已获得“显示在其他应用上层”权限</string>
+    <string name="overlay_permission_required">需要“显示在其他应用上层”权限</string>
+
+    <string name="overlay_permission_revoked">悬浮窗权限已被关闭</string>
+    <string name="overlay_no_links">没有可显示的 Link</string>
+    <string name="overlay_create_failed">无法创建悬浮窗：%1$s</string>
+    <string name="overlay_drag_description">拖动悬浮窗</string>
+    <string name="overlay_minimize_description">收起悬浮窗</string>
+    <string name="overlay_close_description">关闭悬浮窗</string>
+    <string name="overlay_previous">‹  上一条</string>
+    <string name="overlay_previous_description">显示上一条 Link</string>
+    <string name="overlay_next">下一条  ›</string>
+    <string name="overlay_next_description">显示下一条 Link</string>
+    <string name="overlay_progress">拖动  ·  LINK %1$d  ·  %2$d/%3$d</string>
+    <string name="overlay_agent">AGENT %1$d</string>
+    <string name="overlay_origin">起点  #%1$d\n%2$s</string>
+    <string name="overlay_destination">终点  #%1$d\n%2$s</string>
+
+    <string name="privacy_policy">隐私政策</string>
+    <string name="privacy_policy_description">在浏览器中打开 Maxfield Link Overlay 隐私政策</string>
+    <string name="privacy_policy_unavailable">无法打开隐私政策，请稍后重试</string>
+</resources>

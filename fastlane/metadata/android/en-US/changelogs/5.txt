@@ -1,0 +1,3 @@
+* Added a complete English interface and English store screenshots.
+* Preserved Simplified Chinese as a localized interface.
+* Enabled upstream-signed reproducible builds for F-Droid inclusion.

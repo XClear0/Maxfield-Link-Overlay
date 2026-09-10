@@ -93,13 +93,12 @@ public final class MainActivity extends Activity {
             });
         }
 
-        TextView eyebrow = Ui.text(this, """
-                INGRESS OPERATION TOOL""", 12, Ui.ACCENT);
+        TextView eyebrow = Ui.text(this, getString(R.string.main_eyebrow), 12, Ui.ACCENT);
         eyebrow.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         eyebrow.setLetterSpacing(0.12f);
         root.addView(eyebrow);
 
-        TextView title = Ui.text(this, "Maxfield\nLink Overlay", 28, Ui.PRIMARY);
+        TextView title = Ui.text(this, getString(R.string.main_title), 28, Ui.PRIMARY);
         title.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         LinearLayout.LayoutParams titleParams = fullWidth();
         titleParams.topMargin = Ui.dp(this, 4);
@@ -107,7 +106,7 @@ public final class MainActivity extends Activity {
 
         TextView description = Ui.text(
                 this,
-                "导入 Maxfield 的行动清单，在游戏上方逐条显示 Link 起点和终点。",
+                getString(R.string.main_description),
                 14,
                 Ui.SECONDARY);
         LinearLayout.LayoutParams descriptionParams = fullWidth();
@@ -119,16 +118,16 @@ public final class MainActivity extends Activity {
         planCardParams.topMargin = Ui.dp(this, 12);
         root.addView(planCard, planCardParams);
 
-        TextView planLabel = sectionLabel("1  导入规划");
+        TextView planLabel = sectionLabel(getString(R.string.section_import_plan));
         planCard.addView(planLabel);
 
-        planStatus = Ui.text(this, "尚未导入规划", 15, Ui.SECONDARY);
+        planStatus = Ui.text(this, getString(R.string.plan_status_none), 15, Ui.SECONDARY);
         LinearLayout.LayoutParams statusParams = fullWidth();
         statusParams.topMargin = Ui.dp(this, 10);
         planCard.addView(planStatus, statusParams);
 
-        Button importButton = Ui.button(this, "选择 Maxfield 规划文件", true);
-        importButton.setContentDescription("导入 Maxfield 规划文件");
+        Button importButton = Ui.button(this, getString(R.string.select_plan_file), true);
+        importButton.setContentDescription(getString(R.string.import_plan_content_description));
         importButton.setOnClickListener(view -> choosePlan());
         LinearLayout.LayoutParams importParams = fullWidth();
         importParams.topMargin = Ui.dp(this, 16);
@@ -141,7 +140,7 @@ public final class MainActivity extends Activity {
         previewParams.topMargin = Ui.dp(this, 12);
         planCard.addView(preview, previewParams);
 
-        Button resetButton = Ui.button(this, "从第一条 Link 开始", false);
+        Button resetButton = Ui.button(this, getString(R.string.reset_to_first_link), false);
         resetButton.setOnClickListener(view -> {
             PlanRepository.setIndex(this, 0);
             if (OverlayService.isRunning()) {
@@ -158,25 +157,25 @@ public final class MainActivity extends Activity {
         overlayCardParams.topMargin = Ui.dp(this, 8);
         root.addView(overlayCard, overlayCardParams);
 
-        overlayCard.addView(sectionLabel("2  开启悬浮窗"));
+        overlayCard.addView(sectionLabel(getString(R.string.section_enable_overlay)));
         permissionStatus = Ui.text(this, "", 15, Ui.SECONDARY);
         LinearLayout.LayoutParams permissionParams = fullWidth();
         permissionParams.topMargin = Ui.dp(this, 10);
         overlayCard.addView(permissionStatus, permissionParams);
 
-        Button permissionButton = Ui.button(this, "授予悬浮窗权限", false);
+        Button permissionButton = Ui.button(this, getString(R.string.grant_overlay_permission), false);
         permissionButton.setOnClickListener(view -> openOverlaySettings(false));
         LinearLayout.LayoutParams permissionButtonParams = fullWidth();
         permissionButtonParams.topMargin = Ui.dp(this, 14);
         overlayCard.addView(permissionButton, permissionButtonParams);
 
-        startButton = Ui.button(this, "在游戏上方显示", true);
+        startButton = Ui.button(this, getString(R.string.show_over_game), true);
         startButton.setOnClickListener(view -> prepareAndStartOverlay());
         LinearLayout.LayoutParams startParams = fullWidth();
         startParams.topMargin = Ui.dp(this, 10);
         overlayCard.addView(startButton, startParams);
 
-        stopButton = Ui.button(this, "关闭悬浮窗", false);
+        stopButton = Ui.button(this, getString(R.string.close_overlay), false);
         stopButton.setOnClickListener(view -> sendOverlayAction(OverlayService.ACTION_STOP));
         LinearLayout.LayoutParams stopParams = fullWidth();
         stopParams.topMargin = Ui.dp(this, 10);
@@ -184,13 +183,7 @@ public final class MainActivity extends Activity {
 
         TextView tips = Ui.text(
                 this,
-                """
-                        支持文件
-                        • agent_assignments.txt（推荐，多 Agent 总顺序）
-                        • agent_N_assignment.txt（只看某位 Agent）
-                        • agent_assignments.csv
-
-                        悬浮窗顶部可拖动；上一条/下一条会自动保存当前位置。切回本应用可重置进度或关闭悬浮窗。""",
+                getString(R.string.supported_files_help),
                 14,
                 Ui.SECONDARY);
         LinearLayout.LayoutParams tipsParams = fullWidth();
@@ -273,7 +266,7 @@ public final class MainActivity extends Activity {
             if (OverlayService.isRunning()) {
                 sendOverlayAction(OverlayService.ACTION_RELOAD);
             }
-            Toast.makeText(this, "已导入 " + steps.size() + " 条 Link", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, getString(R.string.plan_imported, steps.size()), Toast.LENGTH_LONG).show();
             updateScreen();
         } catch (IOException | SecurityException error) {
             Toast.makeText(this, error.getMessage(), Toast.LENGTH_LONG).show();
@@ -295,13 +288,13 @@ public final class MainActivity extends Activity {
         } catch (RuntimeException ignored) {
             // A document provider may not expose a display name.
         }
-        return "Maxfield 规划";
+        return getString(R.string.default_plan_name);
     }
 
     private void prepareAndStartOverlay() {
         PlanRepository.PlanData plan = PlanRepository.loadPlan(this);
         if (plan.steps.isEmpty()) {
-            Toast.makeText(this, "请先导入规划文件", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.import_plan_first, Toast.LENGTH_SHORT).show();
             return;
         }
         if (!Settings.canDrawOverlays(this)) {
@@ -334,7 +327,7 @@ public final class MainActivity extends Activity {
         Intent intent = new Intent(this, OverlayService.class);
         intent.setAction(OverlayService.ACTION_SHOW);
         startForegroundService(intent);
-        Toast.makeText(this, "悬浮窗已开启，可切换到游戏", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, R.string.overlay_started, Toast.LENGTH_SHORT).show();
         updateScreen();
     }
 
@@ -365,8 +358,8 @@ public final class MainActivity extends Activity {
 
         boolean permission = Settings.canDrawOverlays(this);
         permissionStatus.setText(permission
-                ? "✓ 已获得“显示在其他应用上层”权限"
-                : "需要“显示在其他应用上层”权限");
+                ? R.string.overlay_permission_granted
+                : R.string.overlay_permission_required);
         permissionStatus.setTextColor(permission ? Ui.ACCENT : Ui.SECONDARY);
         startButton.setEnabled(!plan.steps.isEmpty());
         startButton.setAlpha(plan.steps.isEmpty() ? 0.45f : 1f);

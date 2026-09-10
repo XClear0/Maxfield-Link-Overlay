@@ -1,18 +1,50 @@
 <resources>
     <string name="app_name">Maxfield Link Overlay</string>
-    <string name="notification_channel_name">Maxfield 悬浮窗</string>
-    <string name="notification_channel_description">在游戏上方持续显示当前 Maxfield Link</string>
-    <string name="notification_title">Maxfield Link 悬浮窗运行中</string>
-    <string name="notification_stop">关闭悬浮窗</string>
-    <string name="plan_status_none">尚未导入规划</string>
-    <string name="plan_status_count">%1$s\n%2$d 条 Link</string>
-    <string name="preview_placeholder">导入后将在这里预览第一条 Link</string>
-    <string name="preview_current_step">当前 %1$d / %2$d  ·  Agent %3$d\n#%4$d  %5$s\n↓\n#%6$d  %7$s</string>
-    <string name="overlay_progress">拖动  ·  LINK %1$d  ·  %2$d/%3$d</string>
+    <string name="notification_channel_name">Maxfield overlay</string>
+    <string name="notification_channel_description">Keep the current Maxfield Link visible over the game</string>
+    <string name="notification_title">Maxfield Link Overlay is running</string>
+    <string name="notification_stop">Close overlay</string>
+    <string name="notification_loading">Loading plan…</string>
+
+    <string name="main_eyebrow">INGRESS OPERATION TOOL</string>
+    <string name="main_title">Maxfield\nLink Overlay</string>
+    <string name="main_description">Import a Maxfield action plan and follow each Link’s origin and destination over the game.</string>
+    <string name="section_import_plan">1  Import plan</string>
+    <string name="plan_status_none">No plan imported</string>
+    <string name="plan_status_count">%1$s\n%2$d Links</string>
+    <string name="select_plan_file">Select Maxfield plan file</string>
+    <string name="import_plan_content_description">Import a Maxfield plan file</string>
+    <string name="preview_placeholder">The first Link will be previewed here after import</string>
+    <string name="preview_current_step">Current %1$d / %2$d  ·  Agent %3$d\n#%4$d  %5$s\n↓\n#%6$d  %7$s</string>
+    <string name="reset_to_first_link">Start from the first Link</string>
+    <string name="section_enable_overlay">2  Enable overlay</string>
+    <string name="grant_overlay_permission">Grant overlay permission</string>
+    <string name="show_over_game">Show over the game</string>
+    <string name="close_overlay">Close overlay</string>
+    <string name="supported_files_help">Supported files\n• agent_assignments.txt (recommended, full multi-Agent order)\n• agent_N_assignment.txt (one Agent only)\n• agent_assignments.csv\n\nDrag the overlay by its header. The Previous and Next buttons save your position automatically. Return to this app to reset progress or close the overlay.</string>
+    <string name="plan_imported">Imported %1$d Links</string>
+    <string name="default_plan_name">Maxfield plan</string>
+    <string name="import_plan_first">Import a plan file first</string>
+    <string name="overlay_started">Overlay enabled. You can switch to the game.</string>
+    <string name="overlay_permission_granted">✓ “Display over other apps” permission granted</string>
+    <string name="overlay_permission_required">“Display over other apps” permission required</string>
+
+    <string name="overlay_permission_revoked">Overlay permission has been revoked</string>
+    <string name="overlay_no_links">No Links to display</string>
+    <string name="overlay_create_failed">Unable to create overlay: %1$s</string>
+    <string name="overlay_drag_description">Drag overlay</string>
+    <string name="overlay_minimize_description">Minimize overlay</string>
+    <string name="overlay_close_description">Close overlay</string>
+    <string name="overlay_previous">‹  Previous</string>
+    <string name="overlay_previous_description">Show previous Link</string>
+    <string name="overlay_next">Next  ›</string>
+    <string name="overlay_next_description">Show next Link</string>
+    <string name="overlay_progress">Drag  ·  LINK %1$d  ·  %2$d/%3$d</string>
     <string name="overlay_agent">AGENT %1$d</string>
-    <string name="overlay_origin">起点  #%1$d\n%2$s</string>
-    <string name="overlay_destination">终点  #%1$d\n%2$s</string>
-    <string name="privacy_policy">隐私政策</string>
-    <string name="privacy_policy_description">在浏览器中打开 Maxfield Link Overlay 隐私政策</string>
-    <string name="privacy_policy_unavailable">无法打开隐私政策，请稍后重试</string>
+    <string name="overlay_origin">ORIGIN  #%1$d\n%2$s</string>
+    <string name="overlay_destination">DESTINATION  #%1$d\n%2$s</string>
+
+    <string name="privacy_policy">Privacy policy</string>
+    <string name="privacy_policy_description">Open the Maxfield Link Overlay privacy policy in a browser</string>
+    <string name="privacy_policy_unavailable">Unable to open the privacy policy. Try again later.</string>
 </resources>
