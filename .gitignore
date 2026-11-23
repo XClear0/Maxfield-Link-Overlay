@@ -13,3 +13,6 @@ keystore.properties
 captures/
 .externalNativeBuild/
 .cxx/
+/.artifacts/fdroid/
+/.artifacts/repro/
+/.artifacts/screenshots/
