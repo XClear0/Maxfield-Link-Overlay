@@ -35,6 +35,8 @@
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
 
+        <activity android:name=".OverlaySizeActivity" android:exported="false" />
+
         <service
             android:name=".OverlayService"
             android:exported="false"

@@ -16,7 +16,10 @@
     <string name="tab_settings">设置</string>
     <string name="current_plan_title">当前规划</string>
     <string name="plan_status_none">尚未导入规划</string>
-    <string name="plan_status_count">%1$s\n%2$d 条 Link</string>
+    <string name="plan_status_count">%1$s\n%2$d 条 Link · %3$s</string>
+    <plurals name="plan_total_keys">
+        <item quantity="other">共需 %d 把 Key</item>
+    </plurals>
     <string name="select_plan_file">选择 Maxfield 规划文件</string>
     <string name="import_plan_content_description">导入 Maxfield 规划文件</string>
     <string name="preview_placeholder">请到「选择规划」页导入或选择一份规划。</string>
@@ -33,6 +36,10 @@
     <string name="portal_search_no_matches">当前规划中没有匹配的 Portal。</string>
     <string name="portal_search_portal">%1$s（#%2$d）</string>
     <string name="portal_search_link">Link #%1$d · Agent %2$d\n#%3$d %4$s → #%5$d %6$s</string>
+    <string name="portal_search_overlay_title">在悬浮窗显示搜索结果？</string>
+    <string name="portal_search_overlay_confirm">%1$s\n\n从这条 Link 开始查看匹配结果。退出此页后，原规划进度不变。</string>
+    <string name="portal_search_overlay_show">在悬浮窗显示</string>
+    <string name="portal_search_overlay_failed">无法在悬浮窗中显示这些搜索结果。</string>
     <plurals name="portal_search_link_count">
         <item quantity="other">%d 条相关连线</item>
     </plurals>
@@ -43,7 +50,7 @@
     <string name="ingress_unavailable">无法打开 Ingress，请确认已安装游戏。</string>
     <string name="saved_plans_help">点选规划即可切换，左滑可重命名或删除。每份规划分别保存 Link 进度。</string>
     <string name="saved_plans_empty">还没有保存的规划。</string>
-    <string name="saved_plan_progress">第 %1$d / %2$d 条 Link</string>
+    <string name="saved_plan_progress">第 %1$d / %2$d 条 Link · %3$s</string>
     <string name="saved_plan_row">%1$s\n%2$s · %3$s</string>
     <string name="saved_plan_active">%1$s\n当前规划 · %2$s · %3$s</string>
     <string name="saved_plan_unavailable">无法打开这份已保存的规划。</string>
@@ -57,7 +64,7 @@
     <string name="delete_action">删除</string>
     <string name="plan_delete_confirm">要从本机删除「%1$s」及其已保存的 Link 进度吗？</string>
     <string name="plan_delete_failed">无法删除这份规划。</string>
-    <string name="plan_imported">已导入 %1$d 条 Link</string>
+    <string name="plan_imported">已导入 %1$d 条 Link · %2$s</string>
     <string name="plan_import_open_failed">无法打开所选文件。</string>
     <string name="plan_import_file_too_large">规划文件超过 5 MB，无法导入。</string>
     <string name="plan_import_no_links">没有找到 Link。请选择 Maxfield 导出的 agent_assignments.txt、agent_N_assignment.txt 或 agent_assignments.csv。</string>
@@ -82,13 +89,22 @@
     <string name="overlay_next">下一条  ›</string>
     <string name="overlay_next_description">显示下一条 Link</string>
     <string name="overlay_progress">拖动  ·  LINK %1$d  ·  %2$d/%3$d</string>
+    <string name="overlay_search_progress">搜索结果  ·  LINK %1$d  ·  %2$d/%3$d</string>
     <string name="overlay_agent">AGENT %1$d</string>
     <string name="overlay_link_arrow">↓  连线</string>
     <string name="overlay_origin">起点  #%1$d\n%2$s</string>
+    <string name="overlay_origin_keys">此 Link 之后，起点还需 %1$d 把 Key</string>
     <string name="overlay_destination">终点  #%1$d\n%2$s</string>
 
     <string name="settings_language_row">语言 · %1$s</string>
     <string name="settings_version">版本 %1$s</string>
+    <string name="overlay_size_title">悬浮窗大小</string>
+    <string name="overlay_size_hint">按住窗内可移动预览，拖动边缘或四角可调整大小。</string>
+    <string name="overlay_size_sample_origin">示例起点</string>
+    <string name="overlay_size_sample_destination">示例终点</string>
+    <string name="overlay_size_handle">可拖动的悬浮窗预览</string>
+    <string name="overlay_size_dimensions">宽度 %1$d%%  ·  高度 %2$d%%</string>
+    <string name="overlay_size_restore_default">恢复默认</string>
     <string name="about_title">关于</string>
     <string name="about_intro">Maxfield Link Overlay 是由 XClear0 开发的离线 Android 工具。它导入 Maxfield 的连线任务，并在浮窗中逐条显示起点、终点和负责的 Agent。</string>
     <string name="about_license_title">开源许可</string>

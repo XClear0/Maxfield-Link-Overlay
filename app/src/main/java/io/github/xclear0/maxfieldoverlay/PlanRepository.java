@@ -29,18 +29,20 @@ final class PlanRepository {
     private static final String INDEX_PREFIX = "plan_index_";
     private static final String DISPLAY_NAME = "displayName";
     private static final String STEP_COUNT = "stepCount";
+    private static final String KEY_COUNT = "keyCount";
     private static final String IMPORTED_AT = "importedAt";
     private static final String X = "overlay_x";
     private static final String Y = "overlay_y";
 
     private PlanRepository() {}
 
-    static void savePlan(Context context, String displayName, List<LinkStep> steps)
+    static int savePlan(Context context, String displayName, List<LinkStep> steps)
             throws IOException {
         migrateLegacyPlan(context);
         String id = UUID.randomUUID().toString();
         JSONObject root = new JSONObject();
         JSONArray array = new JSONArray();
+        int totalKeys = PlanKeys.totalForPlan(steps);
         String info;
         try {
             root.put(DISPLAY_NAME, displayName);
@@ -48,7 +50,7 @@ final class PlanRepository {
                 array.put(step.toJson());
             }
             root.put("steps", array);
-            info = createInfo(displayName, steps.size(), System.currentTimeMillis());
+            info = createInfo(displayName, steps.size(), totalKeys, System.currentTimeMillis());
         } catch (JSONException error) {
             throw new IOException("Unable to serialize the plan", error);
         }
@@ -63,6 +65,7 @@ final class PlanRepository {
             throw error;
         }
         prefs(context).edit().putString(PLAN_PREFIX + id, info).putString(ACTIVE, id).apply();
+        return totalKeys;
     }
 
     static String activePlanId(Context context) {
@@ -143,7 +146,7 @@ final class PlanRepository {
                 try {
                     JSONObject info = new JSONObject(value);
                     int count = info.getInt(STEP_COUNT);
-                    plans.add(new PlanSummary(id, displayName(context, info), count,
+                    plans.add(new PlanSummary(id, displayName(context, info), count, info.optInt(KEY_COUNT, count),
                             getIndex(context, id, count), info.getLong(IMPORTED_AT)));
                 } catch (JSONException ignored) {
                     // Keep the remaining saved plans available if one entry is damaged.
@@ -176,7 +179,8 @@ final class PlanRepository {
         try {
             PlanData plan = readPlan(context, LEGACY_ID);
             SharedPreferences.Editor editor = prefs.edit().putString(PLAN_PREFIX + LEGACY_ID,
-                    createInfo(plan.displayName, plan.steps.size(), legacy.lastModified()));
+                    createInfo(plan.displayName, plan.steps.size(), PlanKeys.totalForPlan(plan.steps),
+                            legacy.lastModified()));
             editor.putInt(INDEX_PREFIX + LEGACY_ID, prefs.getInt(LEGACY_INDEX, 0));
             if (!prefs.contains(ACTIVE)) {
                 editor.putString(ACTIVE, LEGACY_ID);
@@ -214,8 +218,8 @@ final class PlanRepository {
         return data.optString(DISPLAY_NAME, context.getString(R.string.default_plan_name));
     }
 
-    private static String createInfo(String name, int count, long importedAt) throws JSONException {
-        return new JSONObject().put(DISPLAY_NAME, name).put(STEP_COUNT, count)
+    private static String createInfo(String name, int count, int keyCount, long importedAt) throws JSONException {
+        return new JSONObject().put(DISPLAY_NAME, name).put(STEP_COUNT, count).put(KEY_COUNT, keyCount)
                 .put(IMPORTED_AT, importedAt).toString();
     }
 
@@ -271,13 +275,15 @@ final class PlanRepository {
         final String id;
         final String displayName;
         final int stepCount;
+        final int keyCount;
         final int index;
         final long importedAt;
 
-        PlanSummary(String id, String displayName, int stepCount, int index, long importedAt) {
+        PlanSummary(String id, String displayName, int stepCount, int keyCount, int index, long importedAt) {
             this.id = id;
             this.displayName = displayName;
             this.stepCount = stepCount;
+            this.keyCount = keyCount;
             this.index = index;
             this.importedAt = importedAt;
         }

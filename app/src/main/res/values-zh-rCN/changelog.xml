@@ -1,0 +1,10 @@
+<resources>
+    <string name="changelog_title">更新日志</string>
+    <string name="changelog_v1_3_0">• 左滑已保存的规划，可重命名或删除。\n• 从浮窗进入搜索时预填当前终点，可一键清空搜索框。\n• 用临时浮窗查看匹配的 Link，不改变原规划进度。\n• 统计整份规划需要的 Key，以及当前起点后续还需的 Key。\n• 浮窗收起时停靠较近的一侧；尺寸预览可移动、缩放或恢复默认。\n• 可在「关于」中离线查看更新日志。</string>
+    <string name="changelog_v1_2_3">• 可保存多份规划，分别记录 Link 进度。\n• 支持按 Portal 名称搜索并查看相连的 Link。\n• 新增图标底栏、语言设置和「关于」，首页可打开 Ingress。</string>
+    <string name="changelog_v1_2_2">• 在简体中文之外新增英文界面。</string>
+    <string name="changelog_v1_2_1">• 添加隐私政策入口，关闭规划与进度的云备份。\n• 加强 Gradle Wrapper 下载与校验。</string>
+    <string name="changelog_v1_2_0">• 更新应用图标，添加 Apache 2.0 许可，支持从源码构建未签名的发行包。</string>
+    <string name="changelog_v1_1_0">• 切换到不同起点的 Link 时，浮窗变色提示。\n• GitHub 自动构建并发布签名版本。</string>
+    <string name="changelog_v1_0_0">• 首个公开版本：导入 Maxfield 规划，在可拖动浮窗中查看 Link，并保存进度。</string>
+</resources>

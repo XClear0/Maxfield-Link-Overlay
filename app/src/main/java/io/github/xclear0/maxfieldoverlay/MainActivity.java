@@ -82,6 +82,8 @@ public final class MainActivity extends Activity {
     private Button resetButton;
     private Button startButton;
     private boolean startWhenPermissionGranted;
+    private boolean activityStarted;
+    private boolean settingsPageVisible;
 
     @Override
     protected void attachBaseContext(Context base) {
@@ -106,6 +108,28 @@ public final class MainActivity extends Activity {
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
         outState.putString(STATE_TAB, selectedTab.name());
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        activityStarted = true;
+        updateSettingsOverlayVisibility();
+    }
+
+    @Override
+    protected void onStop() {
+        activityStarted = false;
+        updateSettingsOverlayVisibility();
+        super.onStop();
+    }
+
+    private void updateSettingsOverlayVisibility() {
+        boolean visible = activityStarted && selectedTab == Tab.SETTINGS;
+        if (visible != settingsPageVisible) {
+            settingsPageVisible = visible;
+            OverlayService.setOverlayPageVisible(visible);
+        }
     }
 
     @Override
@@ -170,6 +194,7 @@ public final class MainActivity extends Activity {
     private void showTab(Tab tab) {
         closePlanActions();
         selectedTab = tab;
+        updateSettingsOverlayVisibility();
         for (Tab item : Tab.values()) {
             ImageButton button = tabButtons[item.ordinal()];
             boolean selected = item == tab;
@@ -334,7 +359,7 @@ public final class MainActivity extends Activity {
         for (PlanRepository.PlanSummary plan : plans) {
             boolean active = plan.id.equals(activeId);
             String progress = getString(R.string.saved_plan_progress,
-                    Math.min(plan.index + 1, plan.stepCount), plan.stepCount);
+                    Math.min(plan.index + 1, plan.stepCount), plan.stepCount, keyTotal(plan.keyCount));
             String date = dateFormat.format(new Date(plan.importedAt));
             String label = active
                     ? getString(R.string.saved_plan_active, plan.displayName, progress, date)
@@ -463,6 +488,11 @@ public final class MainActivity extends Activity {
         language.setOnClickListener(view -> chooseLanguage());
         addSpaced(root, language, 16);
 
+        Button size = Ui.button(this, getString(R.string.overlay_size_title), false);
+        size.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+        size.setOnClickListener(view -> startActivity(new Intent(this, OverlaySizeActivity.class)));
+        addSpaced(root, size, 8);
+
         Button about = Ui.button(this, getString(R.string.about_title), false);
         about.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
         about.setOnClickListener(view -> showAbout());
@@ -510,6 +540,9 @@ public final class MainActivity extends Activity {
         LinearLayout content = page();
         content.addView(sectionLabel(getString(R.string.app_name)));
         addSpaced(content, Ui.text(this, getString(R.string.about_intro), 15, Ui.SECONDARY), 6);
+        Button changelog = Ui.button(this, getString(R.string.changelog_title), false);
+        changelog.setOnClickListener(view -> showChangelog());
+        addSpaced(content, changelog, 12);
         addSpaced(content, sectionLabel(getString(R.string.about_license_title)), 18);
         addSpaced(content, Ui.text(this, getString(R.string.about_license), 15, Ui.SECONDARY), 6);
         Button license = Ui.button(this, getString(R.string.about_license_link), false);
@@ -526,6 +559,32 @@ public final class MainActivity extends Activity {
                 .setView(scrollPage(content))
                 .setPositiveButton(android.R.string.ok, null)
                 .show();
+    }
+
+    private void showChangelog() {
+        LinearLayout content = page();
+        addChangelogEntry(content, "v1.3.0", R.string.changelog_v1_3_0);
+        addChangelogEntry(content, "v1.2.3", R.string.changelog_v1_2_3);
+        addChangelogEntry(content, "v1.2.2", R.string.changelog_v1_2_2);
+        addChangelogEntry(content, "v1.2.1", R.string.changelog_v1_2_1);
+        addChangelogEntry(content, "v1.2.0", R.string.changelog_v1_2_0);
+        addChangelogEntry(content, "v1.1.0", R.string.changelog_v1_1_0);
+        addChangelogEntry(content, "v1.0.0", R.string.changelog_v1_0_0);
+
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.changelog_title)
+                .setView(scrollPage(content))
+                .setPositiveButton(android.R.string.ok, null)
+                .show();
+    }
+
+    private void addChangelogEntry(LinearLayout content, String title, int notes) {
+        TextView heading = sectionLabel(title);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            heading.setAccessibilityHeading(true);
+        }
+        addSpaced(content, heading, content.getChildCount() == 0 ? 0 : 18);
+        addSpaced(content, Ui.text(this, getString(notes), 15, Ui.SECONDARY), 6);
     }
 
     private ScrollView scrollPage(LinearLayout root) {
@@ -642,9 +701,10 @@ public final class MainActivity extends Activity {
         try (InputStream input = getContentResolver().openInputStream(uri)) {
             List<LinkStep> steps = PlanParser.parse(input);
             String displayName = queryDisplayName(uri);
-            PlanRepository.savePlan(this, displayName, steps);
+            int totalKeys = PlanRepository.savePlan(this, displayName, steps);
             reloadRunningOverlay();
-            Toast.makeText(this, getString(R.string.plan_imported, steps.size()), Toast.LENGTH_LONG).show();
+            Toast.makeText(this, getString(R.string.plan_imported, steps.size(), keyTotal(totalKeys)),
+                    Toast.LENGTH_LONG).show();
             showTab(Tab.PLANS);
         } catch (PlanParser.ParseException error) {
             Toast.makeText(this, error.messageRes, Toast.LENGTH_LONG).show();
@@ -723,6 +783,10 @@ public final class MainActivity extends Activity {
         startService(intent);
     }
 
+    private String keyTotal(int count) {
+        return getResources().getQuantityString(R.plurals.plan_total_keys, count, count);
+    }
+
     private void updateHome() {
         PlanRepository.PlanData plan = PlanRepository.loadPlan(this);
         if (plan.steps.isEmpty()) {
@@ -731,7 +795,8 @@ public final class MainActivity extends Activity {
         } else {
             int index = PlanRepository.getIndex(this, plan.id, plan.steps.size());
             LinkStep step = plan.steps.get(index);
-            planStatus.setText(getString(R.string.plan_status_count, plan.displayName, plan.steps.size()));
+            planStatus.setText(getString(R.string.plan_status_count, plan.displayName, plan.steps.size(),
+                    keyTotal(PlanKeys.totalForPlan(plan.steps))));
             preview.setText(getString(R.string.preview_current_step,
                     index + 1, plan.steps.size(), step.agentNumber,
                     step.originNumber, step.originName,

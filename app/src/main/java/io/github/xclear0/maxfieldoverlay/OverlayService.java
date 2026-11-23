@@ -1,5 +1,6 @@
 package io.github.xclear0.maxfieldoverlay;
 
+import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -10,9 +11,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
-import android.graphics.Color;
 import android.graphics.PixelFormat;
-import android.graphics.Typeface;
 import android.os.Build;
 import android.os.IBinder;
 import android.provider.Settings;
@@ -22,12 +21,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
-import android.widget.Button;
 import android.widget.FrameLayout;
-import android.widget.ImageButton;
-import android.widget.ImageView;
-import android.widget.LinearLayout;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import java.lang.ref.WeakReference;
@@ -38,13 +32,21 @@ public final class OverlayService extends Service {
     static final String ACTION_SHOW = "io.github.xclear0.maxfieldoverlay.SHOW";
     static final String ACTION_STOP = "io.github.xclear0.maxfieldoverlay.STOP";
     static final String ACTION_RELOAD = "io.github.xclear0.maxfieldoverlay.RELOAD";
+    private static final String ACTION_SEARCH_RESULTS = "io.github.xclear0.maxfieldoverlay.SEARCH_RESULTS";
+    private static final String ACTION_CLOSE_DISPLAYED = "io.github.xclear0.maxfieldoverlay.CLOSE_DISPLAYED";
+    private static final String EXTRA_SEARCH_OWNER = "searchOwner";
+    private static final String EXTRA_SEARCH_PLAN = "searchPlan";
+    private static final String EXTRA_SEARCH_PORTAL = "searchPortal";
+    private static final String EXTRA_SEARCH_INDEX = "searchIndex";
 
     private static final String CHANNEL_ID = "maxfield_overlay";
     private static final int NOTIFICATION_ID = 9017;
     private static volatile boolean running;
-    // Service and search activity lifecycle callbacks run on the same main thread.
+    // Service and overlay-related activity lifecycle callbacks run on the same main thread.
     private static WeakReference<OverlayService> activeService = new WeakReference<>(null);
-    private static int visibleSearchScreens;
+    private static int visibleOverlayPages;
+    private static String visibleResultsPage;
+    private static String requestedSearchOwner;
 
     private WindowManager windowManager;
     private Context textContext;
@@ -52,22 +54,16 @@ public final class OverlayService extends Service {
             (preferences, key) -> refreshLanguage();
     private WindowManager.LayoutParams windowParams;
     private View overlay;
-    private TextView progressView;
-    private TextView agentView;
-    private TextView originView;
-    private TextView destinationView;
-    private ImageButton searchControl;
-    private TextView minimizeControl;
-    private TextView closeControl;
-    private TextView linkArrow;
-    private Button previousButton;
-    private Button nextButton;
+    private OverlayPanel panel;
     private List<LinkStep> steps = Collections.emptyList();
+    private PlanKeys keys = PlanKeys.forPlan(steps);
     private String planId = "";
     private int index;
+    private boolean normalOverlayRequested;
+    private SearchOverlaySession searchResults;
 
     private boolean isMinimized;
-    private View contentView;
+    private ScaledOverlayPanel contentView;
     private View minimizedBar;
     private View visualBar;
     private int expandedWidth;
@@ -78,17 +74,59 @@ public final class OverlayService extends Service {
         return running;
     }
 
-    static void setSearchScreenVisible(boolean visible) {
-        visibleSearchScreens = Math.max(0, visibleSearchScreens + (visible ? 1 : -1));
+    static void setOverlayPageVisible(boolean visible) {
+        visibleOverlayPages = Math.max(0, visibleOverlayPages + (visible ? 1 : -1));
+        refreshOverlayVisibility();
+    }
+
+    static void setResultsPageVisible(String owner, boolean visible) {
+        if (visible) visibleResultsPage = owner;
+        else if (owner.equals(visibleResultsPage)) visibleResultsPage = null;
+        refreshOverlayVisibility();
+    }
+
+    private static void refreshOverlayVisibility() {
         OverlayService service = activeService.get();
         if (service != null) {
             service.updateOverlayVisibility();
         }
     }
 
+    static void showSearchResults(Context context, String owner, String plan, int portal, int index) {
+        requestedSearchOwner = owner;
+        try {
+            context.startForegroundService(new Intent(context, OverlayService.class)
+                    .setAction(ACTION_SEARCH_RESULTS)
+                    .putExtra(EXTRA_SEARCH_OWNER, owner)
+                    .putExtra(EXTRA_SEARCH_PLAN, plan)
+                    .putExtra(EXTRA_SEARCH_PORTAL, portal)
+                    .putExtra(EXTRA_SEARCH_INDEX, index));
+        } catch (RuntimeException error) {
+            requestedSearchOwner = null;
+            throw error;
+        }
+    }
+
+    static void releaseSearchResults(String owner) {
+        if (owner.equals(requestedSearchOwner)) requestedSearchOwner = null;
+        OverlayService service = activeService.get();
+        if (service != null && service.searchResults != null && owner.equals(service.searchResults.owner)) {
+            service.closeDisplayedOverlay();
+        }
+    }
+
+    static void applySavedSize() {
+        OverlayService service = activeService.get();
+        if (service != null) {
+            service.resizeOverlay();
+        }
+    }
+
     private void updateOverlayVisibility() {
         if (overlay != null) {
-            overlay.setVisibility(visibleSearchScreens == 0 ? View.VISIBLE : View.GONE);
+            boolean allowedOnResults = visibleResultsPage == null
+                    || searchResults != null && searchResults.owner.equals(visibleResultsPage);
+            overlay.setVisibility(visibleOverlayPages == 0 && allowedOnResults ? View.VISIBLE : View.GONE);
         }
     }
 
@@ -107,13 +145,14 @@ public final class OverlayService extends Service {
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
         refreshLanguage();
+        resizeOverlay();
     }
 
     private void refreshLanguage() {
         textContext = AppLanguage.localizedContext(this);
         createNotificationChannel();
         if (overlay != null) {
-            updateControlLabels();
+            panel.setLanguage(textContext);
             updateLink();
         }
     }
@@ -121,11 +160,13 @@ public final class OverlayService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         String action = intent == null ? ACTION_SHOW : intent.getAction();
-        switch (action) {
-            case ACTION_STOP -> {
-                stopOverlay();
-                return START_NOT_STICKY;
-            }
+        if (ACTION_STOP.equals(action)) {
+            stopOverlay();
+            return START_NOT_STICKY;
+        }
+        if (ACTION_CLOSE_DISPLAYED.equals(action)) {
+            closeDisplayedOverlay();
+            return restartPolicy();
         }
 
         if (overlay == null) {
@@ -137,8 +178,37 @@ public final class OverlayService extends Service {
             return START_NOT_STICKY;
         }
 
-        reloadPlan();
-        if (steps.isEmpty()) {
+        if (ACTION_SEARCH_RESULTS.equals(action) && intent != null) {
+            String owner = intent.getStringExtra(EXTRA_SEARCH_OWNER);
+            if (owner == null || !owner.equals(requestedSearchOwner)) {
+                if (overlay == null) stopOverlay();
+                return restartPolicy();
+            }
+            PlanRepository.PlanData plan = PlanRepository.loadPlan(this);
+            SearchOverlaySession results = plan.id.equals(intent.getStringExtra(EXTRA_SEARCH_PLAN))
+                    ? SearchOverlaySession.open(owner, plan.id, plan.steps,
+                            intent.getIntExtra(EXTRA_SEARCH_PORTAL, 0),
+                            intent.getIntExtra(EXTRA_SEARCH_INDEX, -1))
+                    : null;
+            if (results == null) {
+                Toast.makeText(textContext, R.string.portal_search_overlay_failed, Toast.LENGTH_SHORT).show();
+                if (overlay == null) stopOverlay();
+                return restartPolicy();
+            }
+            searchResults = results;
+            if (isMinimized) expand();
+        } else if (ACTION_RELOAD.equals(action)) {
+            if (normalOverlayRequested) reloadPlan();
+            if (searchResults != null && !searchResults.planId.equals(PlanRepository.activePlanId(this))) {
+                clearSearchResults();
+            }
+        } else {
+            clearSearchResults();
+            normalOverlayRequested = true;
+            reloadPlan();
+        }
+
+        if (searchResults == null && (!normalOverlayRequested || steps.isEmpty())) {
             Toast.makeText(textContext, R.string.overlay_no_links, Toast.LENGTH_LONG).show();
             stopOverlay();
             return START_NOT_STICKY;
@@ -147,8 +217,13 @@ public final class OverlayService extends Service {
         if (overlay == null) {
             showOverlay();
         }
+        updateOverlayVisibility();
         updateLink();
-        return START_STICKY;
+        return restartPolicy();
+    }
+
+    private int restartPolicy() {
+        return normalOverlayRequested ? START_STICKY : START_NOT_STICKY;
     }
 
     @Override
@@ -173,14 +248,14 @@ public final class OverlayService extends Service {
         PlanRepository.PlanData data = PlanRepository.loadPlan(this);
         planId = data.id;
         steps = data.steps;
+        keys = PlanKeys.forPlan(steps);
         index = PlanRepository.getIndex(this, planId, steps.size());
     }
 
+    @SuppressLint("RtlHardcoded") // Window positions and edge gestures use physical left/right.
     private void showOverlay() {
         overlay = buildOverlayView();
-        expandedWidth = Math.min(
-                Ui.dp(this, 330),
-                getResources().getDisplayMetrics().widthPixels - Ui.dp(this, 24));
+        applySize();
         windowParams = new WindowManager.LayoutParams(
                 expandedWidth,
                 WindowManager.LayoutParams.WRAP_CONTENT,
@@ -188,7 +263,7 @@ public final class OverlayService extends Service {
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
                         | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
                 PixelFormat.TRANSLUCENT);
-        windowParams.gravity = Gravity.TOP | Gravity.START;
+        windowParams.gravity = Gravity.TOP | Gravity.LEFT;
         windowParams.x = PlanRepository.getX(this, Ui.dp(this, 12));
         windowParams.y = PlanRepository.getY(this, Ui.dp(this, 96));
         windowParams.alpha = 0.92f;
@@ -208,11 +283,43 @@ public final class OverlayService extends Service {
         }
     }
 
+    private void applySize() {
+        OverlaySize.Dimensions size = OverlaySize.load(this);
+        var screen = getResources().getDisplayMetrics();
+        int margins = Ui.dp(this, 24);
+        expandedWidth = OverlaySize.pixels(Ui.dp(this, OverlaySize.BASE_WIDTH_DP),
+                screen.widthPixels - margins, size.width());
+        contentView.setHeightScale(size.height(), screen.heightPixels - margins);
+    }
+
+    private void resizeOverlay() {
+        if (overlay == null) {
+            return;
+        }
+        int oldWidth = expandedWidth;
+        applySize();
+        if (oldWidth == expandedWidth) {
+            return;
+        }
+        if (!isMinimized) {
+            windowParams.width = expandedWidth;
+            int screenWidth = getResources().getDisplayMetrics().widthPixels;
+            windowParams.x = Math.max(0, Math.min(windowParams.x, screenWidth - expandedWidth));
+            windowManager.updateViewLayout(overlay, windowParams);
+            PlanRepository.savePosition(this, windowParams.x, windowParams.y);
+        } else {
+            snapToEdge(OverlaySize.closerToRight(windowParams.x, windowParams.width,
+                    getResources().getDisplayMetrics().widthPixels));
+            windowManager.updateViewLayout(overlay, windowParams);
+        }
+    }
+
     private View buildOverlayView() {
         FrameLayout container = new FrameLayout(this);
 
         // 创建最小化状态的视图 (4dp 视觉条，位于 28dp 宽度的感应区中心)
         FrameLayout barContainer = new FrameLayout(this);
+        barContainer.setLayoutDirection(View.LAYOUT_DIRECTION_LTR);
         barContainer.setVisibility(View.GONE);
 
         visualBar = new View(this);
@@ -228,113 +335,15 @@ public final class OverlayService extends Service {
         container.addView(minimizedBar, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
-        contentView = buildContentView();
+        panel = new OverlayPanel(this);
+        panel.setLanguage(textContext);
+        panel.setActions(dragListener(), this::openDestinationSearch, this::minimize,
+                this::closeDisplayedOverlay, () -> moveBy(-1), () -> moveBy(1));
+        contentView = new ScaledOverlayPanel(this, panel);
         container.addView(contentView, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         return container;
-    }
-
-    private View buildContentView() {
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(
-                Ui.dp(this, 14), Ui.dp(this, 10), Ui.dp(this, 14), Ui.dp(this, 14));
-        root.setBackground(Ui.background(Ui.OVERLAY_SURFACE, 18, this));
-
-        LinearLayout header = new LinearLayout(this);
-        header.setGravity(Gravity.CENTER_VERTICAL);
-        header.setOrientation(LinearLayout.HORIZONTAL);
-        header.setPadding(0, 0, 0, Ui.dp(this, 8));
-        root.addView(header, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-
-        progressView = Ui.text(this, "", 13, Ui.ACCENT);
-        progressView.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        progressView.setLetterSpacing(0.04f);
-        header.addView(progressView, new LinearLayout.LayoutParams(
-                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-
-        searchControl = new ImageButton(this);
-        searchControl.setImageResource(R.drawable.ic_overlay_search);
-        searchControl.setColorFilter(Ui.SECONDARY);
-        searchControl.setScaleType(ImageView.ScaleType.CENTER);
-        searchControl.setBackgroundColor(Color.TRANSPARENT);
-        searchControl.setPadding(0, 0, 0, 0);
-        searchControl.setOnClickListener(view -> openDestinationSearch());
-        header.addView(searchControl, new LinearLayout.LayoutParams(Ui.dp(this, 32), Ui.dp(this, 32)));
-
-        minimizeControl = Ui.text(this, "—", 20, Ui.SECONDARY);
-        minimizeControl.setGravity(Gravity.CENTER);
-        minimizeControl.setPadding(Ui.dp(this, 12), 0, Ui.dp(this, 6), 0);
-        minimizeControl.setOnClickListener(view -> minimize());
-        header.addView(minimizeControl, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-
-        closeControl = Ui.text(this, "×", 25, Ui.SECONDARY);
-        closeControl.setGravity(Gravity.CENTER);
-        closeControl.setPadding(Ui.dp(this, 6), 0, 0, 0);
-        closeControl.setOnClickListener(view -> stopOverlay());
-        header.addView(closeControl, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-
-        View.OnTouchListener dragListener = dragListener();
-        header.setOnTouchListener(dragListener);
-        progressView.setOnTouchListener(dragListener);
-
-        agentView = Ui.text(this, "", 12, Ui.SECONDARY);
-        agentView.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        root.addView(agentView, fullWidth());
-
-        originView = portalView(Ui.ORIGIN);
-        LinearLayout.LayoutParams originParams = fullWidth();
-        originParams.topMargin = Ui.dp(this, 8);
-        root.addView(originView, originParams);
-
-        linkArrow = Ui.text(this, "", 12, Ui.ACCENT);
-        linkArrow.setGravity(Gravity.CENTER_HORIZONTAL);
-        linkArrow.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        linkArrow.setPadding(0, Ui.dp(this, 5), 0, Ui.dp(this, 5));
-        root.addView(linkArrow, fullWidth());
-
-        destinationView = portalView(Ui.DESTINATION);
-        root.addView(destinationView, fullWidth());
-
-        LinearLayout controls = new LinearLayout(this);
-        controls.setGravity(Gravity.CENTER);
-        controls.setOrientation(LinearLayout.HORIZONTAL);
-        LinearLayout.LayoutParams controlsParams = fullWidth();
-        controlsParams.topMargin = Ui.dp(this, 12);
-        root.addView(controls, controlsParams);
-
-        previousButton = Ui.button(this, "", false);
-        previousButton.setOnClickListener(view -> moveBy(-1));
-        LinearLayout.LayoutParams previousParams = new LinearLayout.LayoutParams(
-                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-        previousParams.rightMargin = Ui.dp(this, 5);
-        controls.addView(previousButton, previousParams);
-
-        nextButton = Ui.button(this, "", true);
-        nextButton.setOnClickListener(view -> moveBy(1));
-        LinearLayout.LayoutParams nextParams = new LinearLayout.LayoutParams(
-                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-        nextParams.leftMargin = Ui.dp(this, 5);
-        controls.addView(nextButton, nextParams);
-
-        updateControlLabels();
-        return root;
-    }
-
-    private void updateControlLabels() {
-        progressView.setContentDescription(textContext.getText(R.string.overlay_drag_description));
-        searchControl.setContentDescription(textContext.getText(R.string.overlay_search_destination));
-        minimizeControl.setContentDescription(textContext.getText(R.string.overlay_minimize_description));
-        closeControl.setContentDescription(textContext.getText(R.string.overlay_close_description));
-        linkArrow.setText(textContext.getText(R.string.overlay_link_arrow));
-        previousButton.setText(textContext.getText(R.string.overlay_previous));
-        previousButton.setContentDescription(textContext.getText(R.string.overlay_previous_description));
-        nextButton.setText(textContext.getText(R.string.overlay_next));
-        nextButton.setContentDescription(textContext.getText(R.string.overlay_next_description));
     }
 
     private void openDestinationSearch() {
@@ -353,28 +362,26 @@ public final class OverlayService extends Service {
 
     private void minimize() {
         if (isMinimized || overlay == null) return;
+        int[] location = new int[2];
+        overlay.getLocationOnScreen(location);
+        boolean right = OverlaySize.closerToRight(location[0], overlay.getWidth(),
+                getResources().getDisplayMetrics().widthPixels);
         isMinimized = true;
         contentView.setVisibility(View.GONE);
         minimizedBar.setVisibility(View.VISIBLE);
 
         windowParams.width = Ui.dp(this, 48); // 扩大物理点击区域 (从 28dp 到 48dp)
 
-        snapToEdge();
+        snapToEdge(right);
         windowManager.updateViewLayout(overlay, windowParams);
     }
 
-    private void snapToEdge() {
+    private void snapToEdge(boolean right) {
         int screenWidth = getResources().getDisplayMetrics().widthPixels;
         int barWidth = windowParams.width;
 
-        // 计算距离左边还是右边更近
-        if (windowParams.x + barWidth / 2 < screenWidth / 2) {
-            windowParams.x = 0;
-            updateVisualBarGravity(Gravity.START);
-        } else {
-            windowParams.x = screenWidth - barWidth;
-            updateVisualBarGravity(Gravity.END);
-        }
+        windowParams.x = right ? screenWidth - barWidth : 0;
+        updateVisualBarGravity(right ? Gravity.END : Gravity.START);
         PlanRepository.savePosition(this, windowParams.x, windowParams.y);
     }
 
@@ -467,7 +474,8 @@ public final class OverlayService extends Service {
                     case MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                         if (isDraggingMinimized) {
                             isDraggingMinimized = false;
-                            snapToEdge();
+                            snapToEdge(OverlaySize.closerToRight(windowParams.x, windowParams.width,
+                                    getResources().getDisplayMetrics().widthPixels));
                             windowManager.updateViewLayout(overlay, windowParams);
                         }
                         return true;
@@ -478,25 +486,12 @@ public final class OverlayService extends Service {
         };
     }
 
-    private TextView portalView(int accentColor) {
-        TextView view = Ui.text(this, "", 18, Ui.PRIMARY);
-        view.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        view.setMaxLines(3);
-        view.setPadding(
-                Ui.dp(this, 12), Ui.dp(this, 10), Ui.dp(this, 12), Ui.dp(this, 10));
-        android.graphics.drawable.GradientDrawable background =
-                Ui.background(Ui.BACKGROUND, 12, this);
-        background.setStroke(Ui.dp(this, 1), accentColor);
-        view.setBackground(background);
-        return view;
-    }
-
-    private LinearLayout.LayoutParams fullWidth() {
-        return new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-    }
-
     private void moveBy(int change) {
+        if (searchResults != null) {
+            searchResults.moveBy(change);
+            updateLink();
+            return;
+        }
         int next = Math.max(0, Math.min(index + change, steps.size() - 1));
         if (next == index) {
             return;
@@ -507,36 +502,27 @@ public final class OverlayService extends Service {
     }
 
     private void updateLink() {
-        if (steps.isEmpty() || progressView == null) {
+        if (overlay == null || panel == null) {
             return;
         }
-        index = Math.max(0, Math.min(index, steps.size() - 1));
-        LinkStep step = steps.get(index);
-        applyOriginChangeAppearance(LinkProgress.hasOriginChanged(steps, index));
-        progressView.setText(textContext.getString(R.string.overlay_progress, step.linkNumber, index + 1, steps.size()));
-        agentView.setText(textContext.getString(R.string.overlay_agent, step.agentNumber));
-        originView.setText(textContext.getString(R.string.overlay_origin, step.originNumber, step.originName));
-        destinationView.setText(textContext.getString(
-                R.string.overlay_destination, step.destinationNumber, step.destinationName));
-        previousButton.setEnabled(index > 0);
-        previousButton.setAlpha(index > 0 ? 1f : 0.35f);
-        nextButton.setEnabled(index < steps.size() - 1);
-        nextButton.setAlpha(index < steps.size() - 1 ? 1f : 0.35f);
+        LinkStep step;
+        boolean originChanged;
+        if (searchResults != null) {
+            step = searchResults.current();
+            originChanged = searchResults.originChanged();
+            panel.showLink(step, searchResults.index(), searchResults.size(), searchResults.remainingKeys(),
+                    originChanged, true);
+        } else {
+            if (steps.isEmpty()) return;
+            index = Math.max(0, Math.min(index, steps.size() - 1));
+            step = steps.get(index);
+            originChanged = LinkProgress.hasOriginChanged(steps, index);
+            panel.showLink(step, index, steps.size(), keys.remainingForOriginAfter(index), originChanged);
+        }
+        int accent = originChanged ? Ui.ORIGIN_CHANGE_ACCENT : Ui.ACCENT;
+        visualBar.setBackground(Ui.background(accent, 4, this));
         getSystemService(NotificationManager.class).notify(
                 NOTIFICATION_ID, buildNotification(step));
-    }
-
-    private void applyOriginChangeAppearance(boolean originChanged) {
-        int surfaceColor = originChanged
-                ? Ui.ORIGIN_CHANGE_SURFACE
-                : Ui.OVERLAY_SURFACE;
-        int accentColor = originChanged
-                ? Ui.ORIGIN_CHANGE_ACCENT
-                : Ui.ACCENT;
-
-        contentView.setBackground(Ui.background(surfaceColor, 18, this));
-        progressView.setTextColor(accentColor);
-        visualBar.setBackground(Ui.background(accentColor, 4, this));
     }
 
     private View.OnTouchListener dragListener() {
@@ -588,7 +574,26 @@ public final class OverlayService extends Service {
         };
     }
 
+    private void clearSearchResults() {
+        if (searchResults != null && searchResults.owner.equals(requestedSearchOwner)) {
+            requestedSearchOwner = null;
+        }
+        searchResults = null;
+    }
+
+    private void closeDisplayedOverlay() {
+        if (searchResults != null && normalOverlayRequested && !steps.isEmpty()) {
+            clearSearchResults();
+            updateOverlayVisibility();
+            updateLink();
+        } else {
+            stopOverlay();
+        }
+    }
+
     private void stopOverlay() {
+        clearSearchResults();
+        normalOverlayRequested = false;
         removeOverlay();
         running = false;
         stopForeground(STOP_FOREGROUND_REMOVE);
@@ -625,7 +630,7 @@ public final class OverlayService extends Service {
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
         Intent stopIntent = new Intent(this, OverlayService.class);
-        stopIntent.setAction(ACTION_STOP);
+        stopIntent.setAction(ACTION_CLOSE_DISPLAYED);
         PendingIntent stopPending = PendingIntent.getService(
                 this,
                 1,

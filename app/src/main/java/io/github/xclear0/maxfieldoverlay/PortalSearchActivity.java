@@ -1,13 +1,17 @@
 package io.github.xclear0.maxfieldoverlay;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Insets;
 import android.graphics.Typeface;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.text.Editable;
 import android.text.InputType;
 import android.text.TextWatcher;
@@ -24,10 +28,12 @@ import android.widget.LinearLayout;
 import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 
 public final class PortalSearchActivity extends Activity {
     private static final String EXTRA_PORTAL_NUMBER = "portalNumber";
@@ -35,10 +41,16 @@ public final class PortalSearchActivity extends Activity {
     private static final String EXTRA_DESTINATION_QUERY = "destinationQuery";
     private static final String STATE_QUERY = "query";
     private static final String STATE_QUERY_PENDING = "queryPending";
+    private static final String STATE_RESULTS_OWNER = "resultsOwner";
+    private static final String STATE_PERMISSION_INDEX = "permissionIndex";
 
     private EditText searchInput;
     private boolean queryPending;
     private List<PortalSearch.Portal> matches = Collections.emptyList();
+    private String resultsOwner;
+    private String resultsPlanId;
+    private int resultsPortal;
+    private int permissionIndex = -1;
 
     static Intent destinationSearchIntent(Context context, String destination) {
         return new Intent(context, PortalSearchActivity.class)
@@ -72,7 +84,8 @@ public final class PortalSearchActivity extends Activity {
             });
         }
 
-        List<LinkStep> steps = PlanRepository.loadPlan(this).steps;
+        PlanRepository.PlanData plan = PlanRepository.loadPlan(this);
+        List<LinkStep> steps = plan.steps;
         Intent intent = getIntent();
         boolean showLinks = intent.hasExtra(EXTRA_PORTAL_NUMBER);
         int backLabel = showLinks ? R.string.portal_search_back_to_matches
@@ -96,6 +109,13 @@ public final class PortalSearchActivity extends Activity {
         addAboveList(root, heading);
 
         if (showLinks) {
+            resultsOwner = savedInstanceState == null ? UUID.randomUUID().toString()
+                    : savedInstanceState.getString(STATE_RESULTS_OWNER, UUID.randomUUID().toString());
+            resultsPlanId = plan.id;
+            resultsPortal = portalNumber;
+            if (savedInstanceState != null) {
+                permissionIndex = savedInstanceState.getInt(STATE_PERMISSION_INDEX, -1);
+            }
             showLinks(root, PortalSearch.findLinks(steps, portalNumber));
         } else {
             showSearch(root, steps, savedInstanceState);
@@ -107,13 +127,37 @@ public final class PortalSearchActivity extends Activity {
     @Override
     protected void onStart() {
         super.onStart();
-        OverlayService.setSearchScreenVisible(true);
+        if (resultsOwner == null) OverlayService.setOverlayPageVisible(true);
+        else OverlayService.setResultsPageVisible(resultsOwner, true);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        int selected = permissionIndex;
+        permissionIndex = -1;
+        if (selected >= 0 && Settings.canDrawOverlays(this)) {
+            startResultOverlay(selected);
+        }
     }
 
     @Override
     protected void onStop() {
-        OverlayService.setSearchScreenVisible(false);
+        if (resultsOwner == null) {
+            OverlayService.setOverlayPageVisible(false);
+        } else {
+            if (isFinishing()) OverlayService.releaseSearchResults(resultsOwner);
+            OverlayService.setResultsPageVisible(resultsOwner, false);
+        }
         super.onStop();
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (resultsOwner != null && !isChangingConfigurations()) {
+            OverlayService.releaseSearchResults(resultsOwner);
+        }
+        super.onDestroy();
     }
 
     @Override
@@ -122,6 +166,10 @@ public final class PortalSearchActivity extends Activity {
         if (searchInput != null) {
             outState.putString(STATE_QUERY, searchInput.getText().toString());
             outState.putBoolean(STATE_QUERY_PENDING, queryPending);
+        }
+        if (resultsOwner != null) {
+            outState.putString(STATE_RESULTS_OWNER, resultsOwner);
+            outState.putInt(STATE_PERMISSION_INDEX, permissionIndex);
         }
     }
 
@@ -256,7 +304,33 @@ public final class PortalSearchActivity extends Activity {
                     link.linkNumber, link.agentNumber, link.originNumber, link.originName,
                     link.destinationNumber, link.destinationName));
         }
-        addList(root, new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, rows));
+        ListView list = addList(root, new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, rows));
+        list.setOnItemClickListener((parent, row, position, id) -> new AlertDialog.Builder(this)
+                .setTitle(R.string.portal_search_overlay_title)
+                .setMessage(getString(R.string.portal_search_overlay_confirm, rows.get(position)))
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(R.string.portal_search_overlay_show, (dialog, which) -> startResultOverlay(position))
+                .show());
+    }
+
+    private void startResultOverlay(int position) {
+        if (!Settings.canDrawOverlays(this)) {
+            try {
+                permissionIndex = position;
+                startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                        Uri.fromParts("package", getPackageName(), null)));
+                Toast.makeText(this, R.string.overlay_permission_required, Toast.LENGTH_LONG).show();
+            } catch (ActivityNotFoundException | SecurityException error) {
+                permissionIndex = -1;
+                Toast.makeText(this, R.string.portal_search_overlay_failed, Toast.LENGTH_SHORT).show();
+            }
+            return;
+        }
+        try {
+            OverlayService.showSearchResults(this, resultsOwner, resultsPlanId, resultsPortal, position);
+        } catch (IllegalStateException | SecurityException error) {
+            Toast.makeText(this, R.string.portal_search_overlay_failed, Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void addAboveList(LinearLayout root, View view) {

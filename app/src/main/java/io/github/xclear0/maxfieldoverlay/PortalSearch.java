@@ -33,11 +33,15 @@ final class PortalSearch {
     static List<LinkStep> findLinks(List<LinkStep> steps, int portalNumber) {
         List<LinkStep> links = new ArrayList<>();
         for (LinkStep step : steps) {
-            if (step.originNumber == portalNumber || step.destinationNumber == portalNumber) {
+            if (connects(step, portalNumber)) {
                 links.add(step);
             }
         }
         return links;
+    }
+
+    static boolean connects(LinkStep step, int portalNumber) {
+        return step.originNumber == portalNumber || step.destinationNumber == portalNumber;
     }
 
     static final class Portal {
