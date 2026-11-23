@@ -19,11 +19,15 @@ import android.os.Build;
 import android.os.Bundle;
 import android.provider.OpenableColumns;
 import android.provider.Settings;
+import android.text.InputType;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowInsets;
+import android.view.WindowManager;
+import android.view.inputmethod.EditorInfo;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.ImageView;
@@ -69,6 +73,7 @@ public final class MainActivity extends Activity {
     private FrameLayout pageHost;
     private final ImageButton[] tabButtons = new ImageButton[Tab.values().length];
     private LinearLayout savedPlanList;
+    private SwipePlanRow openPlanRow;
 
     private TextView planStatus;
     private TextView preview;
@@ -163,6 +168,7 @@ public final class MainActivity extends Activity {
     }
 
     private void showTab(Tab tab) {
+        closePlanActions();
         selectedTab = tab;
         for (Tab item : Tab.values()) {
             ImageButton button = tabButtons[item.ordinal()];
@@ -314,6 +320,7 @@ public final class MainActivity extends Activity {
     }
 
     private void updatePlanList() {
+        closePlanActions();
         savedPlanList.removeAllViews();
         List<PlanRepository.PlanSummary> plans = PlanRepository.listPlans(this);
         if (plans.isEmpty()) {
@@ -336,8 +343,30 @@ public final class MainActivity extends Activity {
             row.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
             row.setSelected(active);
             row.setTextColor(active ? Ui.ACCENT : Ui.PRIMARY);
-            row.setOnClickListener(view -> selectSavedPlan(plan.id));
-            addSpaced(savedPlanList, new SwipePlanRow(this, row, () -> confirmDeletePlan(plan)), 8);
+            SwipePlanRow swipeRow = new SwipePlanRow(this, row,
+                    () -> showRenamePlan(plan), () -> confirmDeletePlan(plan), this::openPlanActions);
+            row.setOnClickListener(view -> {
+                boolean wasOpen = swipeRow.isOpen();
+                closePlanActions();
+                if (!wasOpen) {
+                    selectSavedPlan(plan.id);
+                }
+            });
+            addSpaced(savedPlanList, swipeRow, 8);
+        }
+    }
+
+    private void openPlanActions(SwipePlanRow row) {
+        if (openPlanRow != row) {
+            closePlanActions();
+            openPlanRow = row;
+        }
+    }
+
+    private void closePlanActions() {
+        if (openPlanRow != null) {
+            openPlanRow.closeActions();
+            openPlanRow = null;
         }
     }
 
@@ -352,7 +381,57 @@ public final class MainActivity extends Activity {
         }
     }
 
+    private void showRenamePlan(PlanRepository.PlanSummary plan) {
+        closePlanActions();
+
+        EditText input = new EditText(this);
+        input.setSingleLine(true);
+        input.setInputType(InputType.TYPE_CLASS_TEXT);
+        input.setImeOptions(EditorInfo.IME_ACTION_DONE);
+        input.setHint(R.string.plan_name_hint);
+        input.setText(plan.displayName);
+        input.setSelectAllOnFocus(true);
+
+        FrameLayout field = new FrameLayout(this);
+        field.setPadding(Ui.dp(this, 24), Ui.dp(this, 8), Ui.dp(this, 24), 0);
+        field.addView(input, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle(R.string.plan_rename)
+                .setView(field)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(R.string.save_action, null)
+                .create();
+        input.requestFocus();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
+        }
+        dialog.show();
+
+        Runnable save = () -> {
+            String name = input.getText().toString().trim();
+            if (name.isEmpty()) {
+                input.setError(getString(R.string.plan_name_required));
+            } else if (!PlanRepository.renamePlan(this, plan.id, name)) {
+                input.setError(getString(R.string.plan_rename_failed));
+            } else {
+                dialog.dismiss();
+                updatePlanList();
+            }
+        };
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(view -> save.run());
+        input.setOnEditorActionListener((view, action, event) -> {
+            if (action != EditorInfo.IME_ACTION_DONE) {
+                return false;
+            }
+            save.run();
+            return true;
+        });
+    }
+
     private void confirmDeletePlan(PlanRepository.PlanSummary plan) {
+        closePlanActions();
         AlertDialog dialog = new AlertDialog.Builder(this)
                 .setTitle(R.string.plan_delete)
                 .setMessage(getString(R.string.plan_delete_confirm, plan.displayName))

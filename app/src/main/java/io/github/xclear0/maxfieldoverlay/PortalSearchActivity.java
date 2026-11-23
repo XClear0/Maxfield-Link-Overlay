@@ -3,6 +3,7 @@ package io.github.xclear0.maxfieldoverlay;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Color;
 import android.graphics.Insets;
 import android.graphics.Typeface;
 import android.os.Build;
@@ -10,6 +11,7 @@ import android.os.Bundle;
 import android.text.Editable;
 import android.text.InputType;
 import android.text.TextWatcher;
+import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowInsets;
@@ -30,10 +32,18 @@ import java.util.List;
 public final class PortalSearchActivity extends Activity {
     private static final String EXTRA_PORTAL_NUMBER = "portalNumber";
     private static final String EXTRA_PORTAL_NAME = "portalName";
+    private static final String EXTRA_DESTINATION_QUERY = "destinationQuery";
     private static final String STATE_QUERY = "query";
+    private static final String STATE_QUERY_PENDING = "queryPending";
 
     private EditText searchInput;
+    private boolean queryPending;
     private List<PortalSearch.Portal> matches = Collections.emptyList();
+
+    static Intent destinationSearchIntent(Context context, String destination) {
+        return new Intent(context, PortalSearchActivity.class)
+                .putExtra(EXTRA_DESTINATION_QUERY, destination);
+    }
 
     @Override
     protected void attachBaseContext(Context base) {
@@ -65,8 +75,10 @@ public final class PortalSearchActivity extends Activity {
         List<LinkStep> steps = PlanRepository.loadPlan(this).steps;
         Intent intent = getIntent();
         boolean showLinks = intent.hasExtra(EXTRA_PORTAL_NUMBER);
-        Button back = Ui.button(this, getString(showLinks
-                ? R.string.portal_search_back_to_matches : R.string.portal_search_back), false);
+        int backLabel = showLinks ? R.string.portal_search_back_to_matches
+                : intent.hasExtra(EXTRA_DESTINATION_QUERY) ? R.string.portal_search_back_from_overlay
+                : R.string.portal_search_back;
+        Button back = Ui.button(this, getString(backLabel), false);
         back.setOnClickListener(view -> finish());
         root.addView(back, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -93,27 +105,75 @@ public final class PortalSearchActivity extends Activity {
     }
 
     @Override
+    protected void onStart() {
+        super.onStart();
+        OverlayService.setSearchScreenVisible(true);
+    }
+
+    @Override
+    protected void onStop() {
+        OverlayService.setSearchScreenVisible(false);
+        super.onStop();
+    }
+
+    @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
         if (searchInput != null) {
             outState.putString(STATE_QUERY, searchInput.getText().toString());
+            outState.putBoolean(STATE_QUERY_PENDING, queryPending);
         }
     }
 
     private void showSearch(LinearLayout root, List<LinkStep> steps, Bundle savedInstanceState) {
+        String destination = getIntent().getStringExtra(EXTRA_DESTINATION_QUERY);
+        queryPending = savedInstanceState == null ? destination != null && !destination.isEmpty()
+                : savedInstanceState.getBoolean(STATE_QUERY_PENDING);
+        String initialQuery = savedInstanceState == null ? destination
+                : savedInstanceState.getString(STATE_QUERY, "");
+
+        LinearLayout searchBar = new LinearLayout(this);
+        searchBar.setLayoutDirection(View.LAYOUT_DIRECTION_LTR);
+        searchBar.setGravity(Gravity.CENTER_VERTICAL);
+        searchBar.setBackground(Ui.background(Ui.SURFACE_LIGHT, 12, this));
+
         searchInput = new EditText(this);
         searchInput.setSingleLine(true);
         searchInput.setInputType(InputType.TYPE_CLASS_TEXT);
-        searchInput.setImeOptions(EditorInfo.IME_ACTION_DONE);
+        searchInput.setImeOptions(EditorInfo.IME_ACTION_SEARCH);
         searchInput.setTextSize(16);
         searchInput.setTextColor(Ui.PRIMARY);
         searchInput.setHintTextColor(Ui.SECONDARY);
         searchInput.setHint(R.string.portal_search_hint);
-        if (savedInstanceState != null) {
-            searchInput.setText(savedInstanceState.getString(STATE_QUERY, ""));
-            searchInput.setSelection(searchInput.length());
-        }
-        addAboveList(root, searchInput);
+        searchInput.setBackgroundColor(Color.TRANSPARENT);
+        searchInput.setMinimumHeight(Ui.dp(this, 48));
+        searchInput.setPadding(Ui.dp(this, 14), Ui.dp(this, 10), Ui.dp(this, 6), Ui.dp(this, 10));
+        searchInput.setText(initialQuery);
+        searchInput.setSelection(searchInput.length());
+        searchBar.addView(searchInput, new LinearLayout.LayoutParams(
+                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+        Button clear = Ui.button(this, "×", false);
+        clear.setTextSize(24);
+        clear.setTextColor(Ui.SECONDARY);
+        clear.setBackgroundColor(Color.TRANSPARENT);
+        clear.setPadding(0, 0, 0, 0);
+        clear.setContentDescription(getString(R.string.portal_search_clear));
+        clear.setVisibility(searchInput.length() > 0 ? View.VISIBLE : View.GONE);
+        clear.setOnClickListener(view -> {
+            searchInput.setText("");
+            searchInput.requestFocus();
+            InputMethodManager keyboard = getSystemService(InputMethodManager.class);
+            if (keyboard != null) {
+                keyboard.showSoftInput(searchInput, InputMethodManager.SHOW_IMPLICIT);
+            }
+        });
+        searchBar.addView(clear, new LinearLayout.LayoutParams(Ui.dp(this, 48), Ui.dp(this, 48)));
+        addAboveList(root, searchBar);
+
+        Button submit = Ui.button(this, getString(R.string.portal_search_submit), true);
+        submit.setVisibility(queryPending ? View.VISIBLE : View.GONE);
+        addAboveList(root, submit);
 
         TextView searchStatus = Ui.text(this, "", 14, Ui.SECONDARY);
         searchStatus.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
@@ -122,19 +182,38 @@ public final class PortalSearchActivity extends Activity {
         ArrayAdapter<String> rows = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1);
         ListView list = addList(root, rows);
         list.setOnItemClickListener((parent, row, position, id) -> openPortal(matches.get(position)));
+        Runnable search = () -> {
+            queryPending = false;
+            submit.setVisibility(View.GONE);
+            clear.setVisibility(searchInput.length() > 0 ? View.VISIBLE : View.GONE);
+            updateMatches(steps, searchInput.getText().toString(), searchStatus, rows);
+        };
+        submit.setOnClickListener(view -> search.run());
+        searchInput.setOnEditorActionListener((view, action, event) -> {
+            if (action != EditorInfo.IME_ACTION_SEARCH) {
+                return false;
+            }
+            search.run();
+            hideKeyboard();
+            return true;
+        });
         searchInput.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence text, int start, int count, int after) {}
 
             @Override
             public void onTextChanged(CharSequence text, int start, int before, int count) {
-                updateMatches(steps, text.toString(), searchStatus, rows);
+                search.run();
             }
 
             @Override
             public void afterTextChanged(Editable text) {}
         });
-        updateMatches(steps, searchInput.getText().toString(), searchStatus, rows);
+        if (queryPending) {
+            searchStatus.setVisibility(View.GONE);
+        } else {
+            search.run();
+        }
     }
 
     private void updateMatches(List<LinkStep> steps, String query, TextView status, ArrayAdapter<String> rows) {
@@ -151,11 +230,15 @@ public final class PortalSearchActivity extends Activity {
                 ? R.string.portal_search_prompt : R.string.portal_search_no_matches);
     }
 
-    private void openPortal(PortalSearch.Portal portal) {
+    private void hideKeyboard() {
         InputMethodManager keyboard = getSystemService(InputMethodManager.class);
         if (keyboard != null) {
             keyboard.hideSoftInputFromWindow(searchInput.getWindowToken(), 0);
         }
+    }
+
+    private void openPortal(PortalSearch.Portal portal) {
+        hideKeyboard();
         Intent intent = new Intent(this, PortalSearchActivity.class);
         intent.putExtra(EXTRA_PORTAL_NUMBER, portal.number);
         intent.putExtra(EXTRA_PORTAL_NAME, portal.name);

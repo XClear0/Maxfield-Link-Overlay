@@ -87,6 +87,22 @@ final class PlanRepository {
         return true;
     }
 
+    static boolean renamePlan(Context context, String id, String displayName) {
+        SharedPreferences prefs = prefs(context);
+        String key = PLAN_PREFIX + id;
+        String info = prefs.getString(key, null);
+        String name = displayName.trim();
+        if (info == null || name.isEmpty() || !planFile(context, id).isFile()) {
+            return false;
+        }
+        try {
+            prefs.edit().putString(key, new JSONObject(info).put(DISPLAY_NAME, name).toString()).apply();
+            return true;
+        } catch (JSONException error) {
+            return false;
+        }
+    }
+
     static boolean deletePlan(Context context, String id) {
         SharedPreferences prefs = prefs(context);
         if (!prefs.contains(PLAN_PREFIX + id)) {
@@ -179,7 +195,19 @@ final class PlanRepository {
         for (int i = 0; i < array.length(); i++) {
             steps.add(LinkStep.fromJson(array.getJSONObject(i)));
         }
-        return new PlanData(id, displayName(context, root), steps);
+        return new PlanData(id, savedDisplayName(context, id, root), steps);
+    }
+
+    private static String savedDisplayName(Context context, String id, JSONObject root) {
+        String info = prefs(context).getString(PLAN_PREFIX + id, null);
+        if (info != null) {
+            try {
+                return displayName(context, new JSONObject(info));
+            } catch (JSONException ignored) {
+                // Fall back to the imported name if the catalog entry cannot be read.
+            }
+        }
+        return displayName(context, root);
     }
 
     private static String displayName(Context context, JSONObject data) {

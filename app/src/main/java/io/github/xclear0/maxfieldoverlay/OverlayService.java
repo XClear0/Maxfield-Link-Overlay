@@ -5,10 +5,12 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
+import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.graphics.Typeface;
 import android.os.Build;
@@ -22,10 +24,13 @@ import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.FrameLayout;
+import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.lang.ref.WeakReference;
 import java.util.Collections;
 import java.util.List;
 
@@ -37,6 +42,9 @@ public final class OverlayService extends Service {
     private static final String CHANNEL_ID = "maxfield_overlay";
     private static final int NOTIFICATION_ID = 9017;
     private static volatile boolean running;
+    // Service and search activity lifecycle callbacks run on the same main thread.
+    private static WeakReference<OverlayService> activeService = new WeakReference<>(null);
+    private static int visibleSearchScreens;
 
     private WindowManager windowManager;
     private Context textContext;
@@ -48,6 +56,7 @@ public final class OverlayService extends Service {
     private TextView agentView;
     private TextView originView;
     private TextView destinationView;
+    private ImageButton searchControl;
     private TextView minimizeControl;
     private TextView closeControl;
     private TextView linkArrow;
@@ -69,9 +78,24 @@ public final class OverlayService extends Service {
         return running;
     }
 
+    static void setSearchScreenVisible(boolean visible) {
+        visibleSearchScreens = Math.max(0, visibleSearchScreens + (visible ? 1 : -1));
+        OverlayService service = activeService.get();
+        if (service != null) {
+            service.updateOverlayVisibility();
+        }
+    }
+
+    private void updateOverlayVisibility() {
+        if (overlay != null) {
+            overlay.setVisibility(visibleSearchScreens == 0 ? View.VISIBLE : View.GONE);
+        }
+    }
+
     @Override
     public void onCreate() {
         super.onCreate();
+        activeService = new WeakReference<>(this);
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
         refreshLanguage();
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
@@ -129,6 +153,9 @@ public final class OverlayService extends Service {
 
     @Override
     public void onDestroy() {
+        if (activeService.get() == this) {
+            activeService.clear();
+        }
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
             AppLanguage.legacyPreferences(this).unregisterOnSharedPreferenceChangeListener(languageListener);
         }
@@ -168,6 +195,7 @@ public final class OverlayService extends Service {
 
         try {
             windowManager.addView(overlay, windowParams);
+            updateOverlayVisibility();
             running = true;
         } catch (RuntimeException error) {
             overlay = null;
@@ -226,6 +254,15 @@ public final class OverlayService extends Service {
         progressView.setLetterSpacing(0.04f);
         header.addView(progressView, new LinearLayout.LayoutParams(
                 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+        searchControl = new ImageButton(this);
+        searchControl.setImageResource(R.drawable.ic_overlay_search);
+        searchControl.setColorFilter(Ui.SECONDARY);
+        searchControl.setScaleType(ImageView.ScaleType.CENTER);
+        searchControl.setBackgroundColor(Color.TRANSPARENT);
+        searchControl.setPadding(0, 0, 0, 0);
+        searchControl.setOnClickListener(view -> openDestinationSearch());
+        header.addView(searchControl, new LinearLayout.LayoutParams(Ui.dp(this, 32), Ui.dp(this, 32)));
 
         minimizeControl = Ui.text(this, "—", 20, Ui.SECONDARY);
         minimizeControl.setGravity(Gravity.CENTER);
@@ -290,6 +327,7 @@ public final class OverlayService extends Service {
 
     private void updateControlLabels() {
         progressView.setContentDescription(textContext.getText(R.string.overlay_drag_description));
+        searchControl.setContentDescription(textContext.getText(R.string.overlay_search_destination));
         minimizeControl.setContentDescription(textContext.getText(R.string.overlay_minimize_description));
         closeControl.setContentDescription(textContext.getText(R.string.overlay_close_description));
         linkArrow.setText(textContext.getText(R.string.overlay_link_arrow));
@@ -297,6 +335,20 @@ public final class OverlayService extends Service {
         previousButton.setContentDescription(textContext.getText(R.string.overlay_previous_description));
         nextButton.setText(textContext.getText(R.string.overlay_next));
         nextButton.setContentDescription(textContext.getText(R.string.overlay_next_description));
+    }
+
+    private void openDestinationSearch() {
+        if (steps.isEmpty()) {
+            return;
+        }
+        String destination = steps.get(index).destinationName;
+        Intent intent = PortalSearchActivity.destinationSearchIntent(this, destination)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        try {
+            startActivity(intent);
+        } catch (ActivityNotFoundException | SecurityException error) {
+            Toast.makeText(textContext, R.string.overlay_search_unavailable, Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void minimize() {
