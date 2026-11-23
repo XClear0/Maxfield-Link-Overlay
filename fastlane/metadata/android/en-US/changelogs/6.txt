@@ -1,2 +1,4 @@
-* Fixed reproducible APK builds across Java 17 and Java 21 environments.
-* Kept the English interface and store screenshots ready for F-Droid inclusion.
+* Save multiple plans with independent Link progress. Swipe left to delete a saved plan.
+* Search the active plan by Portal name and see all incoming and outgoing Links.
+* Added a floating icon dock, an English and Simplified Chinese language picker, and an About screen.
+* Open Ingress directly from the app's home screen.
