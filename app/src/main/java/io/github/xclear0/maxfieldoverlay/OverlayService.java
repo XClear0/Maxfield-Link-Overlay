@@ -54,6 +54,7 @@ public final class OverlayService extends Service {
     private Button previousButton;
     private Button nextButton;
     private List<LinkStep> steps = Collections.emptyList();
+    private String planId = "";
     private int index;
 
     private boolean isMinimized;
@@ -103,7 +104,9 @@ public final class OverlayService extends Service {
             }
         }
 
-        startForeground(NOTIFICATION_ID, buildNotification(null));
+        if (overlay == null) {
+            startForeground(NOTIFICATION_ID, buildNotification(null));
+        }
         if (!Settings.canDrawOverlays(this)) {
             Toast.makeText(textContext, R.string.overlay_permission_revoked, Toast.LENGTH_LONG).show();
             stopOverlay();
@@ -141,8 +144,9 @@ public final class OverlayService extends Service {
 
     private void reloadPlan() {
         PlanRepository.PlanData data = PlanRepository.loadPlan(this);
+        planId = data.id;
         steps = data.steps;
-        index = PlanRepository.getIndex(this, steps.size());
+        index = PlanRepository.getIndex(this, planId, steps.size());
     }
 
     private void showOverlay() {
@@ -446,7 +450,7 @@ public final class OverlayService extends Service {
             return;
         }
         index = next;
-        PlanRepository.setIndex(this, index);
+        PlanRepository.setIndex(this, planId, index);
         updateLink();
     }
 

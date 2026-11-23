@@ -19,6 +19,8 @@ final class Ui {
     static final int SECONDARY = 0xFFAABBC8;
     static final int ORIGIN = 0xFF65D1FF;
     static final int DESTINATION = 0xFF7BE495;
+    static final int DELETE_SURFACE = 0xFF943849;
+    static final int DELETE_ACCENT = 0xFFFF99A5;
 
     private Ui() {}
 
@@ -30,6 +32,14 @@ final class Ui {
         GradientDrawable drawable = new GradientDrawable();
         drawable.setColor(color);
         drawable.setCornerRadius(dp(context, Math.round(radiusDp)));
+        return drawable;
+    }
+
+    static GradientDrawable glass(Context context, int radiusDp, int upper, int lower, int rim) {
+        GradientDrawable drawable = new GradientDrawable(
+                GradientDrawable.Orientation.TL_BR, new int[] {upper, lower});
+        drawable.setCornerRadius(dp(context, radiusDp));
+        drawable.setStroke(dp(context, 1), rim);
         return drawable;
     }
 

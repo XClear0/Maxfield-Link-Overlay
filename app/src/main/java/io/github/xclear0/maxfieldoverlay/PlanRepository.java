@@ -2,25 +2,34 @@ package io.github.xclear0.maxfieldoverlay;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.util.AtomicFile;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.BufferedReader;
-import java.io.FileNotFoundException;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 final class PlanRepository {
-    private static final String PLAN_FILE = "imported_plan.json";
+    private static final String LEGACY_FILE = "imported_plan.json";
+    private static final String LEGACY_ID = "legacy";
     private static final String PREFS = "overlay_state";
-    private static final String INDEX = "current_index";
+    private static final String LEGACY_INDEX = "current_index";
+    private static final String ACTIVE = "active_plan";
+    private static final String PLAN_PREFIX = "plan_info_";
+    private static final String INDEX_PREFIX = "plan_index_";
+    private static final String DISPLAY_NAME = "displayName";
+    private static final String STEP_COUNT = "stepCount";
+    private static final String IMPORTED_AT = "importedAt";
     private static final String X = "overlay_x";
     private static final String Y = "overlay_y";
 
@@ -28,60 +37,174 @@ final class PlanRepository {
 
     static void savePlan(Context context, String displayName, List<LinkStep> steps)
             throws IOException {
+        migrateLegacyPlan(context);
+        String id = UUID.randomUUID().toString();
         JSONObject root = new JSONObject();
         JSONArray array = new JSONArray();
+        String info;
         try {
-            root.put("displayName", displayName);
+            root.put(DISPLAY_NAME, displayName);
             for (LinkStep step : steps) {
                 array.put(step.toJson());
             }
             root.put("steps", array);
+            info = createInfo(displayName, steps.size(), System.currentTimeMillis());
         } catch (JSONException error) {
             throw new IOException("Unable to serialize the plan", error);
         }
 
-        try (OutputStreamWriter writer = new OutputStreamWriter(
-                context.openFileOutput(PLAN_FILE, Context.MODE_PRIVATE),
-                StandardCharsets.UTF_8)) {
-            writer.write(root.toString());
+        AtomicFile file = new AtomicFile(planFile(context, id));
+        FileOutputStream output = file.startWrite();
+        try {
+            output.write(root.toString().getBytes(StandardCharsets.UTF_8));
+            file.finishWrite(output);
+        } catch (IOException | RuntimeException error) {
+            file.failWrite(output);
+            throw error;
         }
-        setIndex(context, 0);
+        prefs(context).edit().putString(PLAN_PREFIX + id, info).putString(ACTIVE, id).apply();
+    }
+
+    static String activePlanId(Context context) {
+        migrateLegacyPlan(context);
+        SharedPreferences prefs = prefs(context);
+        String id = prefs.getString(ACTIVE, "");
+        if (!id.isEmpty() && !planFile(context, id).isFile()) {
+            String fallback = newestPlanId(context);
+            prefs.edit().remove(PLAN_PREFIX + id).remove(INDEX_PREFIX + id)
+                    .putString(ACTIVE, fallback).apply();
+            return fallback;
+        }
+        return id;
+    }
+
+    static boolean selectPlan(Context context, String id) {
+        SharedPreferences prefs = prefs(context);
+        if (!prefs.contains(PLAN_PREFIX + id) || !planFile(context, id).isFile()) {
+            return false;
+        }
+        prefs.edit().putString(ACTIVE, id).apply();
+        return true;
+    }
+
+    static boolean deletePlan(Context context, String id) {
+        SharedPreferences prefs = prefs(context);
+        if (!prefs.contains(PLAN_PREFIX + id)) {
+            return false;
+        }
+
+        File file = planFile(context, id);
+        new AtomicFile(file).delete();
+        if (file.exists()) {
+            return false;
+        }
+
+        SharedPreferences.Editor editor = prefs.edit().remove(PLAN_PREFIX + id).remove(INDEX_PREFIX + id);
+        if (LEGACY_ID.equals(id)) {
+            editor.remove(LEGACY_INDEX);
+        }
+        if (id.equals(prefs.getString(ACTIVE, ""))) {
+            editor.putString(ACTIVE, newestPlanId(context));
+        }
+        editor.apply();
+        return true;
+    }
+
+    private static String newestPlanId(Context context) {
+        List<PlanSummary> plans = listPlans(context);
+        return plans.isEmpty() ? "" : plans.get(0).id;
+    }
+
+    static List<PlanSummary> listPlans(Context context) {
+        migrateLegacyPlan(context);
+        List<PlanSummary> plans = new ArrayList<>();
+        for (Map.Entry<String, ?> entry : prefs(context).getAll().entrySet()) {
+            if (entry.getKey().startsWith(PLAN_PREFIX) && entry.getValue() instanceof String value) {
+                String id = entry.getKey().substring(PLAN_PREFIX.length());
+                if (!planFile(context, id).isFile()) {
+                    continue;
+                }
+                try {
+                    JSONObject info = new JSONObject(value);
+                    int count = info.getInt(STEP_COUNT);
+                    plans.add(new PlanSummary(id, displayName(context, info), count,
+                            getIndex(context, id, count), info.getLong(IMPORTED_AT)));
+                } catch (JSONException ignored) {
+                    // Keep the remaining saved plans available if one entry is damaged.
+                }
+            }
+        }
+        plans.sort(Comparator.comparingLong((PlanSummary plan) -> plan.importedAt).reversed()
+                .thenComparing(plan -> plan.id));
+        return plans;
     }
 
     static PlanData loadPlan(Context context) {
-        StringBuilder content = new StringBuilder();
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(
-                context.openFileInput(PLAN_FILE), StandardCharsets.UTF_8))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                content.append(line);
-            }
-            JSONObject root = new JSONObject(content.toString());
-            JSONArray array = root.getJSONArray("steps");
-            List<LinkStep> steps = new ArrayList<>(array.length());
-            for (int i = 0; i < array.length(); i++) {
-                steps.add(LinkStep.fromJson(array.getJSONObject(i)));
-            }
-            return new PlanData(
-                    root.optString("displayName", context.getString(R.string.default_plan_name)),
-                    steps);
-        } catch (FileNotFoundException ignored) {
+        String id = activePlanId(context);
+        if (id.isEmpty()) {
             return PlanData.empty();
-        } catch (IOException | JSONException ignored) {
+        }
+        try {
+            return readPlan(context, id);
+        } catch (IOException | JSONException error) {
             return PlanData.empty();
         }
     }
 
-    static int getIndex(Context context, int stepCount) {
-        if (stepCount <= 0) {
-            return 0;
+    private static void migrateLegacyPlan(Context context) {
+        SharedPreferences prefs = prefs(context);
+        File legacy = planFile(context, LEGACY_ID);
+        if (prefs.contains(PLAN_PREFIX + LEGACY_ID) || !legacy.isFile()) {
+            return;
         }
-        int saved = prefs(context).getInt(INDEX, 0);
+        try {
+            PlanData plan = readPlan(context, LEGACY_ID);
+            SharedPreferences.Editor editor = prefs.edit().putString(PLAN_PREFIX + LEGACY_ID,
+                    createInfo(plan.displayName, plan.steps.size(), legacy.lastModified()));
+            editor.putInt(INDEX_PREFIX + LEGACY_ID, prefs.getInt(LEGACY_INDEX, 0));
+            if (!prefs.contains(ACTIVE)) {
+                editor.putString(ACTIVE, LEGACY_ID);
+            }
+            editor.apply();
+        } catch (IOException | JSONException ignored) {
+            // Leave the original file available if it cannot be read.
+        }
+    }
+
+    private static PlanData readPlan(Context context, String id) throws IOException, JSONException {
+        byte[] bytes = new AtomicFile(planFile(context, id)).readFully();
+        JSONObject root = new JSONObject(new String(bytes, StandardCharsets.UTF_8));
+        JSONArray array = root.getJSONArray("steps");
+        List<LinkStep> steps = new ArrayList<>(array.length());
+        for (int i = 0; i < array.length(); i++) {
+            steps.add(LinkStep.fromJson(array.getJSONObject(i)));
+        }
+        return new PlanData(id, displayName(context, root), steps);
+    }
+
+    private static String displayName(Context context, JSONObject data) {
+        return data.optString(DISPLAY_NAME, context.getString(R.string.default_plan_name));
+    }
+
+    private static String createInfo(String name, int count, long importedAt) throws JSONException {
+        return new JSONObject().put(DISPLAY_NAME, name).put(STEP_COUNT, count)
+                .put(IMPORTED_AT, importedAt).toString();
+    }
+
+    private static File planFile(Context context, String id) {
+        return new File(context.getFilesDir(), LEGACY_ID.equals(id) ? LEGACY_FILE : "plan-" + id + ".json");
+    }
+
+    static int getIndex(Context context, String id, int stepCount) {
+        int saved = prefs(context).getInt(INDEX_PREFIX + id, 0);
         return Math.max(0, Math.min(saved, stepCount - 1));
     }
 
-    static void setIndex(Context context, int index) {
-        prefs(context).edit().putInt(INDEX, Math.max(index, 0)).apply();
+    static void setIndex(Context context, String id, int index) {
+        SharedPreferences prefs = prefs(context);
+        if (prefs.contains(PLAN_PREFIX + id)) {
+            prefs.edit().putInt(INDEX_PREFIX + id, Math.max(index, 0)).apply();
+        }
     }
 
     static int getX(Context context, int fallback) {
@@ -101,16 +224,34 @@ final class PlanRepository {
     }
 
     static final class PlanData {
+        final String id;
         final String displayName;
         final List<LinkStep> steps;
 
-        PlanData(String displayName, List<LinkStep> steps) {
+        PlanData(String id, String displayName, List<LinkStep> steps) {
+            this.id = id;
             this.displayName = displayName;
             this.steps = Collections.unmodifiableList(new ArrayList<>(steps));
         }
 
         static PlanData empty() {
-            return new PlanData("", Collections.emptyList());
+            return new PlanData("", "", Collections.emptyList());
+        }
+    }
+
+    static final class PlanSummary {
+        final String id;
+        final String displayName;
+        final int stepCount;
+        final int index;
+        final long importedAt;
+
+        PlanSummary(String id, String displayName, int stepCount, int index, long importedAt) {
+            this.id = id;
+            this.displayName = displayName;
+            this.stepCount = stepCount;
+            this.index = index;
+            this.importedAt = importedAt;
         }
     }
 }

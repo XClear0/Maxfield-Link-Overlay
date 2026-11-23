@@ -13,12 +13,15 @@
     <string name="language_system">Follow system</string>
     <string name="language_english" translatable="false">English</string>
     <string name="language_chinese" translatable="false">简体中文</string>
-    <string name="section_import_plan">1  Import plan</string>
+    <string name="tab_home">Home</string>
+    <string name="tab_plans">Plans</string>
+    <string name="tab_settings">Settings</string>
+    <string name="current_plan_title">Current plan</string>
     <string name="plan_status_none">No plan imported</string>
     <string name="plan_status_count">%1$s\n%2$d Links</string>
     <string name="select_plan_file">Select Maxfield plan file</string>
     <string name="import_plan_content_description">Import a Maxfield plan file</string>
-    <string name="preview_placeholder">The first Link will be previewed here after import</string>
+    <string name="preview_placeholder">Open Plans to import or select a plan.</string>
     <string name="preview_current_step">Current %1$d / %2$d  ·  Agent %3$d\n#%4$d  %5$s\n↓\n#%6$d  %7$s</string>
     <string name="reset_to_first_link">Start from the first Link</string>
     <string name="portal_search_title">Search portals</string>
@@ -33,11 +36,21 @@
         <item quantity="one">%d connected Link</item>
         <item quantity="other">%d connected Links</item>
     </plurals>
-    <string name="section_enable_overlay">2  Enable overlay</string>
+    <string name="section_enable_overlay">Overlay</string>
     <string name="grant_overlay_permission">Grant overlay permission</string>
     <string name="show_over_game">Show over the game</string>
-    <string name="close_overlay">Close overlay</string>
-    <string name="supported_files_help">Supported files\n• agent_assignments.txt (recommended, full multi-Agent order)\n• agent_N_assignment.txt (one Agent only)\n• agent_assignments.csv\n\nDrag the overlay by its header. The Previous and Next buttons save your position automatically. Return to this app to reset progress or close the overlay.</string>
+    <string name="open_ingress">Open Ingress</string>
+    <string name="ingress_unavailable">Unable to open Ingress. Check that it is installed.</string>
+    <string name="saved_plans_help">Tap a plan to activate it. Swipe left to delete it. Each plan keeps its own Link progress.</string>
+    <string name="saved_plans_empty">No saved plans yet.</string>
+    <string name="saved_plan_progress">Link %1$d / %2$d</string>
+    <string name="saved_plan_row">%1$s\n%2$s · %3$s</string>
+    <string name="saved_plan_active">%1$s\nActive · %2$s · %3$s</string>
+    <string name="saved_plan_unavailable">Unable to open the saved plan.</string>
+    <string name="plan_delete">Delete plan</string>
+    <string name="delete_action">Delete</string>
+    <string name="plan_delete_confirm">Delete “%1$s” and its saved Link progress from this device?</string>
+    <string name="plan_delete_failed">Unable to delete the saved plan.</string>
     <string name="plan_imported">Imported %1$d Links</string>
     <string name="plan_import_open_failed">Unable to open the selected file.</string>
     <string name="plan_import_file_too_large">This plan file exceeds 5 MB.</string>
@@ -66,7 +79,15 @@
     <string name="overlay_origin">ORIGIN  #%1$d\n%2$s</string>
     <string name="overlay_destination">DESTINATION  #%1$d\n%2$s</string>
 
+    <string name="settings_language_row">Language · %1$s</string>
+    <string name="settings_version">Version %1$s</string>
+    <string name="about_title">About</string>
+    <string name="about_intro">Maxfield Link Overlay is an offline Android companion by XClear0. It imports Maxfield link assignments and displays each link’s origin, destination, and assigned agent in a floating overlay.</string>
+    <string name="about_license_title">Open-source license</string>
+    <string name="about_license">The app is released under the Apache License 2.0.</string>
+    <string name="about_license_link">Read the license</string>
+    <string name="about_declaration_title">Privacy and disclaimer</string>
+    <string name="about_declaration">Your plans and progress stay on your device. This independently developed tool is not an official Ingress app. It does not access your game account or automate gameplay.</string>
     <string name="privacy_policy">Privacy policy</string>
-    <string name="privacy_policy_description">Open the Maxfield Link Overlay privacy policy in a browser</string>
-    <string name="privacy_policy_unavailable">Unable to open the privacy policy. Try again later.</string>
+    <string name="about_link_unavailable">Unable to open the link.</string>
 </resources>
