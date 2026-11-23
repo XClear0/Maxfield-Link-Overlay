@@ -1,0 +1,2 @@
+* Fixed reproducible APK builds across Java 17 and Java 21 environments.
+* Kept the English interface and store screenshots ready for F-Droid inclusion.

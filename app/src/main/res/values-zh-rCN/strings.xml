@@ -6,9 +6,11 @@
     <string name="notification_stop">关闭悬浮窗</string>
     <string name="notification_loading">正在载入规划…</string>
 
-    <string name="main_eyebrow">INGRESS OPERATION TOOL</string>
+    <string name="main_eyebrow">INGRESS 行动助手</string>
     <string name="main_title">Maxfield\nLink Overlay</string>
     <string name="main_description">导入 Maxfield 的行动清单，在游戏上方逐条显示 Link 起点和终点。</string>
+    <string name="language_title">语言</string>
+    <string name="language_system">跟随系统</string>
     <string name="section_import_plan">1  导入规划</string>
     <string name="plan_status_none">尚未导入规划</string>
     <string name="plan_status_count">%1$s\n%2$d 条 Link</string>
@@ -17,12 +19,28 @@
     <string name="preview_placeholder">导入后将在这里预览第一条 Link</string>
     <string name="preview_current_step">当前 %1$d / %2$d  ·  Agent %3$d\n#%4$d  %5$s\n↓\n#%6$d  %7$s</string>
     <string name="reset_to_first_link">从第一条 Link 开始</string>
+    <string name="portal_search_title">搜索 Portal</string>
+    <string name="portal_search_back">返回规划</string>
+    <string name="portal_search_back_to_matches">返回搜索结果</string>
+    <string name="portal_search_hint">Portal 名称</string>
+    <string name="portal_search_prompt">输入 Portal 名称的全部或一部分。</string>
+    <string name="portal_search_no_matches">当前规划中没有匹配的 Portal。</string>
+    <string name="portal_search_portal">%1$s（#%2$d）</string>
+    <string name="portal_search_link">Link #%1$d · Agent %2$d\n#%3$d %4$s → #%5$d %6$s</string>
+    <plurals name="portal_search_link_count">
+        <item quantity="other">%d 条相关连线</item>
+    </plurals>
     <string name="section_enable_overlay">2  开启悬浮窗</string>
     <string name="grant_overlay_permission">授予悬浮窗权限</string>
     <string name="show_over_game">在游戏上方显示</string>
     <string name="close_overlay">关闭悬浮窗</string>
     <string name="supported_files_help">支持文件\n• agent_assignments.txt（推荐，多 Agent 总顺序）\n• agent_N_assignment.txt（只看某位 Agent）\n• agent_assignments.csv\n\n悬浮窗顶部可拖动；上一条/下一条会自动保存当前位置。切回本应用可重置进度或关闭悬浮窗。</string>
     <string name="plan_imported">已导入 %1$d 条 Link</string>
+    <string name="plan_import_open_failed">无法打开所选文件。</string>
+    <string name="plan_import_file_too_large">规划文件超过 5 MB，无法导入。</string>
+    <string name="plan_import_no_links">没有找到 Link。请选择 Maxfield 导出的 agent_assignments.txt、agent_N_assignment.txt 或 agent_assignments.csv。</string>
+    <string name="plan_import_too_many_links">规划超过 10000 条 Link，无法导入。</string>
+    <string name="plan_import_failed">无法导入所选规划文件。</string>
     <string name="default_plan_name">Maxfield 规划</string>
     <string name="import_plan_first">请先导入规划文件</string>
     <string name="overlay_started">悬浮窗已开启，可切换到游戏</string>
@@ -41,6 +59,7 @@
     <string name="overlay_next_description">显示下一条 Link</string>
     <string name="overlay_progress">拖动  ·  LINK %1$d  ·  %2$d/%3$d</string>
     <string name="overlay_agent">AGENT %1$d</string>
+    <string name="overlay_link_arrow">↓  连线</string>
     <string name="overlay_origin">起点  #%1$d\n%2$s</string>
     <string name="overlay_destination">终点  #%1$d\n%2$s</string>
 

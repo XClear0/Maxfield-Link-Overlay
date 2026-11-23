@@ -9,6 +9,10 @@
     <string name="main_eyebrow">INGRESS OPERATION TOOL</string>
     <string name="main_title">Maxfield\nLink Overlay</string>
     <string name="main_description">Import a Maxfield action plan and follow each Link’s origin and destination over the game.</string>
+    <string name="language_title">Language</string>
+    <string name="language_system">Follow system</string>
+    <string name="language_english" translatable="false">English</string>
+    <string name="language_chinese" translatable="false">简体中文</string>
     <string name="section_import_plan">1  Import plan</string>
     <string name="plan_status_none">No plan imported</string>
     <string name="plan_status_count">%1$s\n%2$d Links</string>
@@ -17,12 +21,29 @@
     <string name="preview_placeholder">The first Link will be previewed here after import</string>
     <string name="preview_current_step">Current %1$d / %2$d  ·  Agent %3$d\n#%4$d  %5$s\n↓\n#%6$d  %7$s</string>
     <string name="reset_to_first_link">Start from the first Link</string>
+    <string name="portal_search_title">Search portals</string>
+    <string name="portal_search_back">Back to plan</string>
+    <string name="portal_search_back_to_matches">Back to matches</string>
+    <string name="portal_search_hint">Portal name</string>
+    <string name="portal_search_prompt">Enter part or all of a portal name.</string>
+    <string name="portal_search_no_matches">No portals in this plan match that name.</string>
+    <string name="portal_search_portal">%1$s (#%2$d)</string>
+    <string name="portal_search_link">Link #%1$d · Agent %2$d\n#%3$d %4$s → #%5$d %6$s</string>
+    <plurals name="portal_search_link_count">
+        <item quantity="one">%d connected Link</item>
+        <item quantity="other">%d connected Links</item>
+    </plurals>
     <string name="section_enable_overlay">2  Enable overlay</string>
     <string name="grant_overlay_permission">Grant overlay permission</string>
     <string name="show_over_game">Show over the game</string>
     <string name="close_overlay">Close overlay</string>
     <string name="supported_files_help">Supported files\n• agent_assignments.txt (recommended, full multi-Agent order)\n• agent_N_assignment.txt (one Agent only)\n• agent_assignments.csv\n\nDrag the overlay by its header. The Previous and Next buttons save your position automatically. Return to this app to reset progress or close the overlay.</string>
     <string name="plan_imported">Imported %1$d Links</string>
+    <string name="plan_import_open_failed">Unable to open the selected file.</string>
+    <string name="plan_import_file_too_large">This plan file exceeds 5 MB.</string>
+    <string name="plan_import_no_links">No Links found. Select a Maxfield agent_assignments.txt, agent_N_assignment.txt, or agent_assignments.csv file.</string>
+    <string name="plan_import_too_many_links">This plan has more than 10,000 Links.</string>
+    <string name="plan_import_failed">Unable to import the selected plan file.</string>
     <string name="default_plan_name">Maxfield plan</string>
     <string name="import_plan_first">Import a plan file first</string>
     <string name="overlay_started">Overlay enabled. You can switch to the game.</string>
@@ -41,6 +62,7 @@
     <string name="overlay_next_description">Show next Link</string>
     <string name="overlay_progress">Drag  ·  LINK %1$d  ·  %2$d/%3$d</string>
     <string name="overlay_agent">AGENT %1$d</string>
+    <string name="overlay_link_arrow">↓  LINK</string>
     <string name="overlay_origin">ORIGIN  #%1$d\n%2$s</string>
     <string name="overlay_destination">DESTINATION  #%1$d\n%2$s</string>
 

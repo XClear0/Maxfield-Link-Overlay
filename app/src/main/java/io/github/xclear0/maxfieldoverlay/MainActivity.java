@@ -2,7 +2,9 @@ package io.github.xclear0.maxfieldoverlay;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.ContentResolver;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
@@ -13,6 +15,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.provider.OpenableColumns;
 import android.provider.Settings;
+import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowInsets;
@@ -37,13 +40,20 @@ public final class MainActivity extends Activity {
     private TextView planStatus;
     private TextView preview;
     private TextView permissionStatus;
+    private Button searchButton;
     private Button startButton;
     private Button stopButton;
     private boolean startWhenPermissionGranted;
 
     @Override
+    protected void attachBaseContext(Context base) {
+        super.attachBaseContext(AppLanguage.localizedContext(base));
+    }
+
+    @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        AppLanguage.migrateLegacyChoice(this);
         setContentView(buildContent());
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -93,10 +103,20 @@ public final class MainActivity extends Activity {
             });
         }
 
+        LinearLayout heading = new LinearLayout(this);
+        heading.setOrientation(LinearLayout.HORIZONTAL);
+        heading.setGravity(Gravity.CENTER_VERTICAL);
+        root.addView(heading, fullWidth());
+
         TextView eyebrow = Ui.text(this, getString(R.string.main_eyebrow), 12, Ui.ACCENT);
         eyebrow.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         eyebrow.setLetterSpacing(0.12f);
-        root.addView(eyebrow);
+        heading.addView(eyebrow, new LinearLayout.LayoutParams(
+                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+        Button language = Ui.button(this, getString(R.string.language_title), false);
+        language.setOnClickListener(view -> chooseLanguage());
+        heading.addView(language);
 
         TextView title = Ui.text(this, getString(R.string.main_title), 28, Ui.PRIMARY);
         title.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
@@ -139,6 +159,13 @@ public final class MainActivity extends Activity {
         LinearLayout.LayoutParams previewParams = fullWidth();
         previewParams.topMargin = Ui.dp(this, 12);
         planCard.addView(preview, previewParams);
+
+        searchButton = Ui.button(this, getString(R.string.portal_search_title), false);
+        searchButton.setOnClickListener(view ->
+                startActivity(new Intent(this, PortalSearchActivity.class)));
+        LinearLayout.LayoutParams searchParams = fullWidth();
+        searchParams.topMargin = Ui.dp(this, 10);
+        planCard.addView(searchButton, searchParams);
 
         Button resetButton = Ui.button(this, getString(R.string.reset_to_first_link), false);
         resetButton.setOnClickListener(view -> {
@@ -210,6 +237,28 @@ public final class MainActivity extends Activity {
         return scrollView;
     }
 
+    private void chooseLanguage() {
+        AppLanguage selected = AppLanguage.current(this);
+        AppLanguage[] choices = AppLanguage.values();
+        CharSequence[] labels = new CharSequence[choices.length];
+        for (int i = 0; i < choices.length; i++) {
+            labels[i] = getText(choices[i].label);
+        }
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.language_title)
+                .setSingleChoiceItems(labels, selected.ordinal(), (dialog, position) -> {
+                    dialog.dismiss();
+                    AppLanguage choice = choices[position];
+                    if (choice != selected) {
+                        choice.apply(this);
+                        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+                            recreate();
+                        }
+                    }
+                })
+                .show();
+    }
+
     private void openPrivacyPolicy() {
         try {
             startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(PRIVACY_POLICY_URL)));
@@ -268,8 +317,10 @@ public final class MainActivity extends Activity {
             }
             Toast.makeText(this, getString(R.string.plan_imported, steps.size()), Toast.LENGTH_LONG).show();
             updateScreen();
+        } catch (PlanParser.ParseException error) {
+            Toast.makeText(this, error.messageRes, Toast.LENGTH_LONG).show();
         } catch (IOException | SecurityException error) {
-            Toast.makeText(this, error.getMessage(), Toast.LENGTH_LONG).show();
+            Toast.makeText(this, R.string.plan_import_failed, Toast.LENGTH_LONG).show();
         }
     }
 
@@ -361,6 +412,8 @@ public final class MainActivity extends Activity {
                 ? R.string.overlay_permission_granted
                 : R.string.overlay_permission_required);
         permissionStatus.setTextColor(permission ? Ui.ACCENT : Ui.SECONDARY);
+        searchButton.setEnabled(!plan.steps.isEmpty());
+        searchButton.setAlpha(plan.steps.isEmpty() ? 0.45f : 1f);
         startButton.setEnabled(!plan.steps.isEmpty());
         startButton.setAlpha(plan.steps.isEmpty() ? 0.45f : 1f);
         stopButton.setEnabled(OverlayService.isRunning());

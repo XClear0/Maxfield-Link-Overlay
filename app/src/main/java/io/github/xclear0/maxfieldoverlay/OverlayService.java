@@ -5,9 +5,13 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.res.Configuration;
 import android.graphics.PixelFormat;
 import android.graphics.Typeface;
+import android.os.Build;
 import android.os.IBinder;
 import android.provider.Settings;
 import android.view.GestureDetector;
@@ -35,12 +39,18 @@ public final class OverlayService extends Service {
     private static volatile boolean running;
 
     private WindowManager windowManager;
+    private Context textContext;
+    private final SharedPreferences.OnSharedPreferenceChangeListener languageListener =
+            (preferences, key) -> refreshLanguage();
     private WindowManager.LayoutParams windowParams;
     private View overlay;
     private TextView progressView;
     private TextView agentView;
     private TextView originView;
     private TextView destinationView;
+    private TextView minimizeControl;
+    private TextView closeControl;
+    private TextView linkArrow;
     private Button previousButton;
     private Button nextButton;
     private List<LinkStep> steps = Collections.emptyList();
@@ -52,6 +62,7 @@ public final class OverlayService extends Service {
     private View visualBar;
     private int expandedWidth;
     private boolean isDraggingMinimized;
+    private GestureDetector minimizedGestureDetector;
 
     static boolean isRunning() {
         return running;
@@ -61,7 +72,25 @@ public final class OverlayService extends Service {
     public void onCreate() {
         super.onCreate();
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
+        refreshLanguage();
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            AppLanguage.legacyPreferences(this).registerOnSharedPreferenceChangeListener(languageListener);
+        }
+    }
+
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        refreshLanguage();
+    }
+
+    private void refreshLanguage() {
+        textContext = AppLanguage.localizedContext(this);
         createNotificationChannel();
+        if (overlay != null) {
+            updateControlLabels();
+            updateLink();
+        }
     }
 
     @Override
@@ -76,14 +105,14 @@ public final class OverlayService extends Service {
 
         startForeground(NOTIFICATION_ID, buildNotification(null));
         if (!Settings.canDrawOverlays(this)) {
-            Toast.makeText(this, R.string.overlay_permission_revoked, Toast.LENGTH_LONG).show();
+            Toast.makeText(textContext, R.string.overlay_permission_revoked, Toast.LENGTH_LONG).show();
             stopOverlay();
             return START_NOT_STICKY;
         }
 
         reloadPlan();
         if (steps.isEmpty()) {
-            Toast.makeText(this, R.string.overlay_no_links, Toast.LENGTH_LONG).show();
+            Toast.makeText(textContext, R.string.overlay_no_links, Toast.LENGTH_LONG).show();
             stopOverlay();
             return START_NOT_STICKY;
         }
@@ -97,6 +126,9 @@ public final class OverlayService extends Service {
 
     @Override
     public void onDestroy() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            AppLanguage.legacyPreferences(this).unregisterOnSharedPreferenceChangeListener(languageListener);
+        }
         removeOverlay();
         running = false;
         super.onDestroy();
@@ -138,7 +170,7 @@ public final class OverlayService extends Service {
             running = false;
             Toast.makeText(
                     this,
-                    getString(R.string.overlay_create_failed, error.getMessage()),
+                    textContext.getString(R.string.overlay_create_failed, error.getMessage()),
                     Toast.LENGTH_LONG).show();
             stopSelf();
         }
@@ -188,24 +220,21 @@ public final class OverlayService extends Service {
         progressView = Ui.text(this, "", 13, Ui.ACCENT);
         progressView.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         progressView.setLetterSpacing(0.04f);
-        progressView.setContentDescription(getString(R.string.overlay_drag_description));
         header.addView(progressView, new LinearLayout.LayoutParams(
                 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
-        TextView minimize = Ui.text(this, "—", 20, Ui.SECONDARY);
-        minimize.setGravity(Gravity.CENTER);
-        minimize.setContentDescription(getString(R.string.overlay_minimize_description));
-        minimize.setPadding(Ui.dp(this, 12), 0, Ui.dp(this, 6), 0);
-        minimize.setOnClickListener(view -> minimize());
-        header.addView(minimize, new LinearLayout.LayoutParams(
+        minimizeControl = Ui.text(this, "—", 20, Ui.SECONDARY);
+        minimizeControl.setGravity(Gravity.CENTER);
+        minimizeControl.setPadding(Ui.dp(this, 12), 0, Ui.dp(this, 6), 0);
+        minimizeControl.setOnClickListener(view -> minimize());
+        header.addView(minimizeControl, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-        TextView close = Ui.text(this, "×", 25, Ui.SECONDARY);
-        close.setGravity(Gravity.CENTER);
-        close.setContentDescription(getString(R.string.overlay_close_description));
-        close.setPadding(Ui.dp(this, 6), 0, 0, 0);
-        close.setOnClickListener(view -> stopOverlay());
-        header.addView(close, new LinearLayout.LayoutParams(
+        closeControl = Ui.text(this, "×", 25, Ui.SECONDARY);
+        closeControl.setGravity(Gravity.CENTER);
+        closeControl.setPadding(Ui.dp(this, 6), 0, 0, 0);
+        closeControl.setOnClickListener(view -> stopOverlay());
+        header.addView(closeControl, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         View.OnTouchListener dragListener = dragListener();
@@ -221,11 +250,11 @@ public final class OverlayService extends Service {
         originParams.topMargin = Ui.dp(this, 8);
         root.addView(originView, originParams);
 
-        TextView arrow = Ui.text(this, "↓  LINK", 12, Ui.ACCENT);
-        arrow.setGravity(Gravity.CENTER_HORIZONTAL);
-        arrow.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        arrow.setPadding(0, Ui.dp(this, 5), 0, Ui.dp(this, 5));
-        root.addView(arrow, fullWidth());
+        linkArrow = Ui.text(this, "", 12, Ui.ACCENT);
+        linkArrow.setGravity(Gravity.CENTER_HORIZONTAL);
+        linkArrow.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        linkArrow.setPadding(0, Ui.dp(this, 5), 0, Ui.dp(this, 5));
+        root.addView(linkArrow, fullWidth());
 
         destinationView = portalView(Ui.DESTINATION);
         root.addView(destinationView, fullWidth());
@@ -237,23 +266,33 @@ public final class OverlayService extends Service {
         controlsParams.topMargin = Ui.dp(this, 12);
         root.addView(controls, controlsParams);
 
-        previousButton = Ui.button(this, getString(R.string.overlay_previous), false);
-        previousButton.setContentDescription(getString(R.string.overlay_previous_description));
+        previousButton = Ui.button(this, "", false);
         previousButton.setOnClickListener(view -> moveBy(-1));
         LinearLayout.LayoutParams previousParams = new LinearLayout.LayoutParams(
                 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
         previousParams.rightMargin = Ui.dp(this, 5);
         controls.addView(previousButton, previousParams);
 
-        nextButton = Ui.button(this, getString(R.string.overlay_next), true);
-        nextButton.setContentDescription(getString(R.string.overlay_next_description));
+        nextButton = Ui.button(this, "", true);
         nextButton.setOnClickListener(view -> moveBy(1));
         LinearLayout.LayoutParams nextParams = new LinearLayout.LayoutParams(
                 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
         nextParams.leftMargin = Ui.dp(this, 5);
         controls.addView(nextButton, nextParams);
 
+        updateControlLabels();
         return root;
+    }
+
+    private void updateControlLabels() {
+        progressView.setContentDescription(textContext.getText(R.string.overlay_drag_description));
+        minimizeControl.setContentDescription(textContext.getText(R.string.overlay_minimize_description));
+        closeControl.setContentDescription(textContext.getText(R.string.overlay_close_description));
+        linkArrow.setText(textContext.getText(R.string.overlay_link_arrow));
+        previousButton.setText(textContext.getText(R.string.overlay_previous));
+        previousButton.setContentDescription(textContext.getText(R.string.overlay_previous_description));
+        nextButton.setText(textContext.getText(R.string.overlay_next));
+        nextButton.setContentDescription(textContext.getText(R.string.overlay_next_description));
     }
 
     private void minimize() {
@@ -309,7 +348,7 @@ public final class OverlayService extends Service {
     }
 
     private View.OnTouchListener minimizedTouchListener() {
-        GestureDetector gestureDetector = new GestureDetector(this, new GestureDetector.SimpleOnGestureListener() {
+        minimizedGestureDetector = new GestureDetector(this, new GestureDetector.SimpleOnGestureListener() {
             @Override
             public boolean onSingleTapConfirmed(MotionEvent e) {
                 if (minimizedBar != null) {
@@ -333,7 +372,7 @@ public final class OverlayService extends Service {
 
             @Override
             public boolean onTouch(View v, MotionEvent event) {
-                gestureDetector.onTouchEvent(event);
+                minimizedGestureDetector.onTouchEvent(event);
 
                 switch (event.getActionMasked()) {
                     case MotionEvent.ACTION_DOWN -> {
@@ -418,10 +457,11 @@ public final class OverlayService extends Service {
         index = Math.max(0, Math.min(index, steps.size() - 1));
         LinkStep step = steps.get(index);
         applyOriginChangeAppearance(LinkProgress.hasOriginChanged(steps, index));
-        progressView.setText(getString(R.string.overlay_progress, step.linkNumber, index + 1, steps.size()));
-        agentView.setText(getString(R.string.overlay_agent, step.agentNumber));
-        originView.setText(getString(R.string.overlay_origin, step.originNumber, step.originName));
-        destinationView.setText(getString(R.string.overlay_destination, step.destinationNumber, step.destinationName));
+        progressView.setText(textContext.getString(R.string.overlay_progress, step.linkNumber, index + 1, steps.size()));
+        agentView.setText(textContext.getString(R.string.overlay_agent, step.agentNumber));
+        originView.setText(textContext.getString(R.string.overlay_origin, step.originNumber, step.originName));
+        destinationView.setText(textContext.getString(
+                R.string.overlay_destination, step.destinationNumber, step.destinationName));
         previousButton.setEnabled(index > 0);
         previousButton.setAlpha(index > 0 ? 1f : 0.35f);
         nextButton.setEnabled(index < steps.size() - 1);
@@ -513,9 +553,9 @@ public final class OverlayService extends Service {
     private void createNotificationChannel() {
         NotificationChannel channel = new NotificationChannel(
                 CHANNEL_ID,
-                getString(R.string.notification_channel_name),
+                textContext.getString(R.string.notification_channel_name),
                 NotificationManager.IMPORTANCE_LOW);
-        channel.setDescription(getString(R.string.notification_channel_description));
+        channel.setDescription(textContext.getString(R.string.notification_channel_description));
         channel.setShowBadge(false);
         getSystemService(NotificationManager.class).createNotificationChannel(channel);
     }
@@ -537,11 +577,11 @@ public final class OverlayService extends Service {
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
         String detail = step == null
-                ? getString(R.string.notification_loading)
+                ? textContext.getString(R.string.notification_loading)
                 : step.originName + " → " + step.destinationName;
         return new Notification.Builder(this, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_link)
-                .setContentTitle(getString(R.string.notification_title))
+                .setContentTitle(textContext.getString(R.string.notification_title))
                 .setContentText(detail)
                 .setStyle(new Notification.BigTextStyle().bigText(detail))
                 .setContentIntent(openPending)
@@ -550,7 +590,7 @@ public final class OverlayService extends Service {
                 .setCategory(Notification.CATEGORY_SERVICE)
                 .addAction(new Notification.Action.Builder(
                         android.graphics.drawable.Icon.createWithResource(this, R.drawable.ic_link),
-                        getString(R.string.notification_stop),
+                        textContext.getString(R.string.notification_stop),
                         stopPending).build())
                 .build();
     }

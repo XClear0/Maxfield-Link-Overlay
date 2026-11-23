@@ -25,9 +25,17 @@ public final class PlanParser {
 
     private PlanParser() {}
 
+    static final class ParseException extends IOException {
+        final int messageRes;
+
+        ParseException(int messageRes) {
+            this.messageRes = messageRes;
+        }
+    }
+
     public static List<LinkStep> parse(InputStream input) throws IOException {
         if (input == null) {
-            throw new IOException("无法打开所选文件");
+            throw new ParseException(R.string.plan_import_open_failed);
         }
 
         StringBuilder content = new StringBuilder();
@@ -38,7 +46,7 @@ public final class PlanParser {
             while ((count = reader.read(buffer)) != -1) {
                 content.append(buffer, 0, count);
                 if (content.length() > MAX_CHARACTERS) {
-                    throw new IOException("规划文件超过 5 MB，无法导入");
+                    throw new ParseException(R.string.plan_import_file_too_large);
                 }
             }
         }
@@ -58,12 +66,10 @@ public final class PlanParser {
         }
 
         if (steps.isEmpty()) {
-            throw new IOException(
-                    "没有找到 Link。请选择 Maxfield 输出的 agent_assignments.txt、"
-                            + "agent_N_assignment.txt 或 agent_assignments.csv");
+            throw new ParseException(R.string.plan_import_no_links);
         }
         if (steps.size() > MAX_STEPS) {
-            throw new IOException("规划超过 10000 条 Link，无法导入");
+            throw new ParseException(R.string.plan_import_too_many_links);
         }
         return steps;
     }

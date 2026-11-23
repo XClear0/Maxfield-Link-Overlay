@@ -37,7 +37,7 @@ final class PlanRepository {
             }
             root.put("steps", array);
         } catch (JSONException error) {
-            throw new IOException("无法保存规划", error);
+            throw new IOException("Unable to serialize the plan", error);
         }
 
         try (OutputStreamWriter writer = new OutputStreamWriter(

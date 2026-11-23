@@ -1,12 +1,20 @@
 package io.github.xclear0.maxfieldoverlay;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 
 import org.junit.Test;
 
 import java.util.List;
 
 public class PlanParserTest {
+    @Test
+    public void reportsImportErrorsUsingTranslatableResources() {
+        PlanParser.ParseException error = assertThrows(
+                PlanParser.ParseException.class, () -> PlanParser.parseForTest("Not a Maxfield plan"));
+        assertEquals(R.string.plan_import_no_links, error.messageRes);
+    }
+
     @Test
     public void parsesMaxfieldTextOutput() throws Exception {
         String text = "Agent Linking Assignments: links should be made in this order\n\n"

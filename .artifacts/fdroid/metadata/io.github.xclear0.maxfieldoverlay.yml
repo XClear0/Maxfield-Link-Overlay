@@ -1,0 +1,26 @@
+Categories:
+  - Game Helper
+License: Apache-2.0
+AuthorName: XClear0
+AuthorWebSite: https://github.com/XClear0
+SourceCode: https://github.com/XClear0/Maxfield-Link-Overlay
+IssueTracker: https://github.com/XClear0/Maxfield-Link-Overlay/issues
+Changelog: https://github.com/XClear0/Maxfield-Link-Overlay/releases
+
+AutoName: Maxfield Link Overlay
+
+RepoType: git
+Repo: https://github.com/XClear0/Maxfield-Link-Overlay.git
+
+Builds:
+  - versionName: 1.2.1
+    versionCode: 4
+    commit: df6a5a7dba1ee3b0732100d8cd0a958bfb708d90
+    subdir: app
+    gradle:
+      - yes
+
+AutoUpdateMode: Version
+UpdateCheckMode: Tags ^v[0-9]+\.[0-9]+\.[0-9]+$
+CurrentVersion: 1.2.1
+CurrentVersionCode: 4
