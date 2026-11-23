@@ -6,9 +6,7 @@
     <string name="notification_stop">Close overlay</string>
     <string name="notification_loading">Loading plan…</string>
 
-    <string name="main_eyebrow">INGRESS OPERATION TOOL</string>
     <string name="main_title">Maxfield\nLink Overlay</string>
-    <string name="main_description">Import a Maxfield action plan and follow each Link’s origin and destination over the game.</string>
     <string name="language_title">Language</string>
     <string name="language_system">Follow system</string>
     <string name="language_english" translatable="false">English</string>

@@ -1,5 +1,6 @@
 <resources>
     <string name="changelog_title">Changelog</string>
+    <string name="changelog_v1_3_1">• Simplified the home screen by removing the tagline and introductory text.</string>
     <string name="changelog_v1_3_0">• Swipe left on a saved plan to rename or delete it.\n• Search from the overlay with the current destination filled in, or clear a search with one tap.\n• Show matching Links in a temporary overlay without changing saved plan progress.\n• Count the Keys needed for each plan and the Keys still needed for the current origin.\n• Minimize to the nearer edge, and move or resize the overlay preview with the option to restore defaults.\n• Read this changelog offline from About.</string>
     <string name="changelog_v1_2_3">• Keep separate Link progress for multiple plans.\n• Find Portals by name and view their matching Links.\n• Added the icon dock, language settings, and About. Launch Ingress from Home.</string>
     <string name="changelog_v1_2_2">• Added English translations alongside Simplified Chinese.</string>

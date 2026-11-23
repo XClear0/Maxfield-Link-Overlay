@@ -238,26 +238,7 @@ public final class MainActivity extends Activity {
 
     private LinearLayout buildHome() {
         LinearLayout root = page();
-
-        TextView eyebrow = Ui.text(this, getString(R.string.main_eyebrow), 12, Ui.ACCENT);
-        eyebrow.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        eyebrow.setLetterSpacing(0.12f);
-        root.addView(eyebrow);
-
-        TextView title = Ui.text(this, getString(R.string.main_title), 28, Ui.PRIMARY);
-        title.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        LinearLayout.LayoutParams titleParams = fullWidth();
-        titleParams.topMargin = Ui.dp(this, 4);
-        root.addView(title, titleParams);
-
-        TextView description = Ui.text(
-                this,
-                getString(R.string.main_description),
-                14,
-                Ui.SECONDARY);
-        LinearLayout.LayoutParams descriptionParams = fullWidth();
-        descriptionParams.topMargin = Ui.dp(this, 6);
-        root.addView(description, descriptionParams);
+        addPageTitle(root, R.string.main_title);
 
         LinearLayout planCard = card();
         LinearLayout.LayoutParams planCardParams = fullWidth();
@@ -563,6 +544,7 @@ public final class MainActivity extends Activity {
 
     private void showChangelog() {
         LinearLayout content = page();
+        addChangelogEntry(content, "v1.3.1", R.string.changelog_v1_3_1);
         addChangelogEntry(content, "v1.3.0", R.string.changelog_v1_3_0);
         addChangelogEntry(content, "v1.2.3", R.string.changelog_v1_2_3);
         addChangelogEntry(content, "v1.2.2", R.string.changelog_v1_2_2);

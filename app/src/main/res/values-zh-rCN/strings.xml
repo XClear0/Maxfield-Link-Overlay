@@ -6,9 +6,7 @@
     <string name="notification_stop">关闭悬浮窗</string>
     <string name="notification_loading">正在载入规划…</string>
 
-    <string name="main_eyebrow">INGRESS 行动助手</string>
     <string name="main_title">Maxfield\nLink Overlay</string>
-    <string name="main_description">导入 Maxfield 的行动清单，在游戏上方逐条显示 Link 起点和终点。</string>
     <string name="language_title">语言</string>
     <string name="language_system">跟随系统</string>
     <string name="tab_home">主页</string>
