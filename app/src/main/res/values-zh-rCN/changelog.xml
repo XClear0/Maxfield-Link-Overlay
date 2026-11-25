@@ -1,5 +1,6 @@
 <resources>
     <string name="changelog_title">更新日志</string>
+    <string name="changelog_v1_3_2">• 将「尚需几把钥匙」移到悬浮窗起点编号的右侧。\n• 从搜索结果选中 Link 后，可在悬浮窗显示并跳转到 Ingress，原规划进度不变。</string>
     <string name="changelog_v1_3_1">• 精简首页，移除「INGRESS 行动助手」和下方的说明文字。</string>
     <string name="changelog_v1_3_0">• 左滑已保存的规划，可重命名或删除。\n• 从浮窗进入搜索时预填当前终点，可一键清空搜索框。\n• 用临时浮窗查看匹配的 Link，不改变原规划进度。\n• 统计整份规划需要的 Key，以及当前起点后续还需的 Key。\n• 浮窗收起时停靠较近的一侧；尺寸预览可移动、缩放或恢复默认。\n• 可在「关于」中离线查看更新日志。</string>
     <string name="changelog_v1_2_3">• 可保存多份规划，分别记录 Link 进度。\n• 支持按 Portal 名称搜索并查看相连的 Link。\n• 新增图标底栏、语言设置和「关于」，首页可打开 Ingress。</string>

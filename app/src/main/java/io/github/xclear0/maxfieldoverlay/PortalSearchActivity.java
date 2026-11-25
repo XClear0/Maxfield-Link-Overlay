@@ -11,6 +11,8 @@ import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Messenger;
 import android.provider.Settings;
 import android.text.Editable;
 import android.text.InputType;
@@ -51,6 +53,7 @@ public final class PortalSearchActivity extends Activity {
     private String resultsPlanId;
     private int resultsPortal;
     private int permissionIndex = -1;
+    private boolean resumed;
 
     static Intent destinationSearchIntent(Context context, String destination) {
         return new Intent(context, PortalSearchActivity.class)
@@ -134,11 +137,18 @@ public final class PortalSearchActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        resumed = true;
         int selected = permissionIndex;
         permissionIndex = -1;
         if (selected >= 0 && Settings.canDrawOverlays(this)) {
             startResultOverlay(selected);
         }
+    }
+
+    @Override
+    protected void onPause() {
+        resumed = false;
+        super.onPause();
     }
 
     @Override
@@ -327,7 +337,13 @@ public final class PortalSearchActivity extends Activity {
             return;
         }
         try {
-            OverlayService.showSearchResults(this, resultsOwner, resultsPlanId, resultsPortal, position);
+            Messenger ready = new Messenger(new Handler(getMainLooper(), message -> {
+                if (message.what == RESULT_OK && resumed && !isFinishing()) {
+                    IngressLauncher.open(this);
+                }
+                return true;
+            }));
+            OverlayService.showSearchResults(this, resultsOwner, resultsPlanId, resultsPortal, position, ready);
         } catch (IllegalStateException | SecurityException error) {
             Toast.makeText(this, R.string.portal_search_overlay_failed, Toast.LENGTH_SHORT).show();
         }

@@ -37,9 +37,9 @@
     <string name="portal_search_no_matches">No portals in this plan match that name.</string>
     <string name="portal_search_portal">%1$s (#%2$d)</string>
     <string name="portal_search_link">Link #%1$d · Agent %2$d\n#%3$d %4$s → #%5$d %6$s</string>
-    <string name="portal_search_overlay_title">Show matching Links in the overlay?</string>
-    <string name="portal_search_overlay_confirm">%1$s\n\nStart here and browse the matching Links. Leaving this results page restores your plan’s progress.</string>
-    <string name="portal_search_overlay_show">Show in overlay</string>
+    <string name="portal_search_overlay_title">Show the overlay and open Ingress?</string>
+    <string name="portal_search_overlay_confirm">%1$s\n\nOpen Ingress and browse matching Links starting here. Your saved plan progress will not change.</string>
+    <string name="portal_search_overlay_show">Show overlay and open Ingress</string>
     <string name="portal_search_overlay_failed">Unable to show these search results in the overlay.</string>
     <plurals name="portal_search_link_count">
         <item quantity="one">%d connected Link</item>
@@ -94,8 +94,8 @@
     <string name="overlay_search_progress">RESULTS  ·  LINK %1$d  ·  %2$d/%3$d</string>
     <string name="overlay_agent">AGENT %1$d</string>
     <string name="overlay_link_arrow">↓  LINK</string>
-    <string name="overlay_origin">ORIGIN  #%1$d\n%2$s</string>
-    <string name="overlay_origin_keys">Origin Keys needed after this Link: %1$d</string>
+    <string name="overlay_origin">ORIGIN #%1$d</string>
+    <string name="overlay_origin_keys">Keys needed: %1$d</string>
     <string name="overlay_destination">DESTINATION  #%1$d\n%2$s</string>
 
     <string name="settings_language_row">Language · %1$s</string>

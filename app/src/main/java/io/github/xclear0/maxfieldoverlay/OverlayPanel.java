@@ -3,6 +3,7 @@ package io.github.xclear0.maxfieldoverlay;
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -17,7 +18,8 @@ final class OverlayPanel extends LinearLayout {
     private final LinearLayout header;
     private final TextView progressView;
     private final TextView agentView;
-    private final TextView originView;
+    private final TextView originTitleView;
+    private final TextView originNameView;
     private final TextView keysView;
     private final TextView destinationView;
     private final ImageButton searchControl;
@@ -75,15 +77,34 @@ final class OverlayPanel extends LinearLayout {
         agentView.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         root.addView(agentView, fullWidth());
 
-        originView = portalView(Ui.ORIGIN);
+        LinearLayout originCard = new LinearLayout(context);
+        originCard.setOrientation(LinearLayout.VERTICAL);
+        stylePortalCard(originCard, Ui.ORIGIN);
         LinearLayout.LayoutParams originParams = fullWidth();
         originParams.topMargin = Ui.dp(context, 8);
-        root.addView(originView, originParams);
+        root.addView(originCard, originParams);
 
-        keysView = Ui.text(context, "", 12, Ui.ORIGIN);
-        LinearLayout.LayoutParams keyParams = fullWidth();
-        keyParams.topMargin = Ui.dp(context, 4);
-        root.addView(keysView, keyParams);
+        LinearLayout originHeader = new LinearLayout(context);
+        originHeader.setOrientation(LinearLayout.HORIZONTAL);
+        originHeader.setLayoutDirection(View.LAYOUT_DIRECTION_LTR);
+        originHeader.setGravity(Gravity.CENTER_VERTICAL);
+        originCard.addView(originHeader, fullWidth());
+
+        originTitleView = portalText(1);
+        originTitleView.setEllipsize(TextUtils.TruncateAt.END);
+        originHeader.addView(originTitleView, new LinearLayout.LayoutParams(
+                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+        keysView = Ui.text(context, "", 13, Ui.ORIGIN);
+        keysView.setMaxLines(1);
+        keysView.setEllipsize(TextUtils.TruncateAt.END);
+        LinearLayout.LayoutParams keyParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        keyParams.setMarginStart(Ui.dp(context, 8));
+        originHeader.addView(keysView, keyParams);
+
+        originNameView = portalText(2);
+        originCard.addView(originNameView, fullWidth());
 
         linkArrow = Ui.text(context, "", 12, Ui.ACCENT);
         linkArrow.setGravity(Gravity.CENTER_HORIZONTAL);
@@ -91,7 +112,8 @@ final class OverlayPanel extends LinearLayout {
         linkArrow.setPadding(0, Ui.dp(context, 5), 0, Ui.dp(context, 5));
         root.addView(linkArrow, fullWidth());
 
-        destinationView = portalView(Ui.DESTINATION);
+        destinationView = portalText(3);
+        stylePortalCard(destinationView, Ui.DESTINATION);
         root.addView(destinationView, fullWidth());
 
         LinearLayout controls = new LinearLayout(context);
@@ -155,7 +177,8 @@ final class OverlayPanel extends LinearLayout {
                 step.linkNumber, index + 1, count));
         searchControl.setVisibility(searchResults ? View.GONE : View.VISIBLE);
         agentView.setText(textContext.getString(R.string.overlay_agent, step.agentNumber));
-        originView.setText(textContext.getString(R.string.overlay_origin, step.originNumber, step.originName));
+        originTitleView.setText(textContext.getString(R.string.overlay_origin, step.originNumber));
+        originNameView.setText(step.originName);
         keysView.setText(textContext.getString(R.string.overlay_origin_keys, remainingKeys));
         destinationView.setText(textContext.getString(
                 R.string.overlay_destination, step.destinationNumber, step.destinationName));
@@ -165,18 +188,21 @@ final class OverlayPanel extends LinearLayout {
         nextButton.setAlpha(index < count - 1 ? 1f : 0.35f);
     }
 
-    private TextView portalView(int accentColor) {
-        Context context = getContext();
-        TextView view = Ui.text(context, "", 18, Ui.PRIMARY);
+    private TextView portalText(int maxLines) {
+        TextView view = Ui.text(getContext(), "", 18, Ui.PRIMARY);
         view.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        view.setMaxLines(3);
+        view.setMaxLines(maxLines);
+        return view;
+    }
+
+    private void stylePortalCard(View view, int accentColor) {
+        Context context = getContext();
         view.setPadding(
                 Ui.dp(context, 12), Ui.dp(context, 10), Ui.dp(context, 12), Ui.dp(context, 10));
         android.graphics.drawable.GradientDrawable background =
                 Ui.background(Ui.BACKGROUND, 12, context);
         background.setStroke(Ui.dp(context, 1), accentColor);
         view.setBackground(background);
-        return view;
     }
 
     private LinearLayout.LayoutParams fullWidth() {

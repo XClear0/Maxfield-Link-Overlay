@@ -34,9 +34,9 @@
     <string name="portal_search_no_matches">当前规划中没有匹配的 Portal。</string>
     <string name="portal_search_portal">%1$s（#%2$d）</string>
     <string name="portal_search_link">Link #%1$d · Agent %2$d\n#%3$d %4$s → #%5$d %6$s</string>
-    <string name="portal_search_overlay_title">在悬浮窗显示搜索结果？</string>
-    <string name="portal_search_overlay_confirm">%1$s\n\n从这条 Link 开始查看匹配结果。退出此页后，原规划进度不变。</string>
-    <string name="portal_search_overlay_show">在悬浮窗显示</string>
+    <string name="portal_search_overlay_title">在悬浮窗显示并打开 Ingress？</string>
+    <string name="portal_search_overlay_confirm">%1$s\n\n打开 Ingress 后，悬浮窗会从这条 Link 开始显示匹配结果，不改变原规划进度。</string>
+    <string name="portal_search_overlay_show">在悬浮窗显示并跳转到 Ingress</string>
     <string name="portal_search_overlay_failed">无法在悬浮窗中显示这些搜索结果。</string>
     <plurals name="portal_search_link_count">
         <item quantity="other">%d 条相关连线</item>
@@ -90,8 +90,8 @@
     <string name="overlay_search_progress">搜索结果  ·  LINK %1$d  ·  %2$d/%3$d</string>
     <string name="overlay_agent">AGENT %1$d</string>
     <string name="overlay_link_arrow">↓  连线</string>
-    <string name="overlay_origin">起点  #%1$d\n%2$s</string>
-    <string name="overlay_origin_keys">此 Link 之后，起点还需 %1$d 把 Key</string>
+    <string name="overlay_origin">起点 #%1$d</string>
+    <string name="overlay_origin_keys">尚需%1$d把钥匙</string>
     <string name="overlay_destination">终点  #%1$d\n%2$s</string>
 
     <string name="settings_language_row">语言 · %1$s</string>

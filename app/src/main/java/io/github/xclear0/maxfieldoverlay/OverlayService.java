@@ -1,5 +1,7 @@
 package io.github.xclear0.maxfieldoverlay;
 
+import static android.app.Activity.RESULT_OK;
+
 import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -14,6 +16,9 @@ import android.content.res.Configuration;
 import android.graphics.PixelFormat;
 import android.os.Build;
 import android.os.IBinder;
+import android.os.Message;
+import android.os.Messenger;
+import android.os.RemoteException;
 import android.provider.Settings;
 import android.view.GestureDetector;
 import android.view.Gravity;
@@ -38,6 +43,7 @@ public final class OverlayService extends Service {
     private static final String EXTRA_SEARCH_PLAN = "searchPlan";
     private static final String EXTRA_SEARCH_PORTAL = "searchPortal";
     private static final String EXTRA_SEARCH_INDEX = "searchIndex";
+    private static final String EXTRA_SEARCH_READY = "searchReady";
 
     private static final String CHANNEL_ID = "maxfield_overlay";
     private static final int NOTIFICATION_ID = 9017;
@@ -92,7 +98,8 @@ public final class OverlayService extends Service {
         }
     }
 
-    static void showSearchResults(Context context, String owner, String plan, int portal, int index) {
+    static void showSearchResults(Context context, String owner, String plan, int portal, int index,
+            Messenger ready) {
         requestedSearchOwner = owner;
         try {
             context.startForegroundService(new Intent(context, OverlayService.class)
@@ -100,7 +107,8 @@ public final class OverlayService extends Service {
                     .putExtra(EXTRA_SEARCH_OWNER, owner)
                     .putExtra(EXTRA_SEARCH_PLAN, plan)
                     .putExtra(EXTRA_SEARCH_PORTAL, portal)
-                    .putExtra(EXTRA_SEARCH_INDEX, index));
+                    .putExtra(EXTRA_SEARCH_INDEX, index)
+                    .putExtra(EXTRA_SEARCH_READY, ready));
         } catch (RuntimeException error) {
             requestedSearchOwner = null;
             throw error;
@@ -219,6 +227,18 @@ public final class OverlayService extends Service {
         }
         updateOverlayVisibility();
         updateLink();
+        if (overlay != null && ACTION_SEARCH_RESULTS.equals(action) && intent != null) {
+            Messenger ready = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                    ? intent.getParcelableExtra(EXTRA_SEARCH_READY, Messenger.class)
+                    : intent.getParcelableExtra(EXTRA_SEARCH_READY);
+            if (ready != null) {
+                try {
+                    ready.send(Message.obtain(null, RESULT_OK));
+                } catch (RemoteException ignored) {
+                    // The requesting screen was closed before the overlay was ready.
+                }
+            }
+        }
         return restartPolicy();
     }
 

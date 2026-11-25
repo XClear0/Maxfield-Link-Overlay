@@ -3,7 +3,6 @@ package io.github.xclear0.maxfieldoverlay;
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.content.ActivityNotFoundException;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
@@ -50,7 +49,6 @@ public final class MainActivity extends Activity {
             "https://xclear0.github.io/Maxfield-Link-Overlay/privacy.html";
     private static final String LICENSE_URL =
             "https://github.com/XClear0/Maxfield-Link-Overlay/blob/main/LICENSE";
-    private static final String INGRESS_PACKAGE = "com.nianticproject.ingress";
     private static final String STATE_TAB = "selected_tab";
     private static final int DOCK_HEIGHT = 60;
     private static final int DOCK_BOTTOM_GAP = 12;
@@ -304,7 +302,7 @@ public final class MainActivity extends Activity {
         overlayCard.addView(startButton, startParams);
 
         Button ingressButton = Ui.button(this, getString(R.string.open_ingress), false);
-        ingressButton.setOnClickListener(view -> openIngress());
+        ingressButton.setOnClickListener(view -> IngressLauncher.open(this));
         addSpaced(overlayCard, ingressButton, 10);
 
         return root;
@@ -544,6 +542,7 @@ public final class MainActivity extends Activity {
 
     private void showChangelog() {
         LinearLayout content = page();
+        addChangelogEntry(content, "v1.3.2", R.string.changelog_v1_3_2);
         addChangelogEntry(content, "v1.3.1", R.string.changelog_v1_3_1);
         addChangelogEntry(content, "v1.3.0", R.string.changelog_v1_3_0);
         addChangelogEntry(content, "v1.2.3", R.string.changelog_v1_2_3);
@@ -624,19 +623,6 @@ public final class MainActivity extends Activity {
         } catch (RuntimeException error) {
             Toast.makeText(this, R.string.about_link_unavailable, Toast.LENGTH_LONG).show();
         }
-    }
-
-    private void openIngress() {
-        Intent launch = getPackageManager().getLaunchIntentForPackage(INGRESS_PACKAGE);
-        if (launch != null) {
-            try {
-                startActivity(launch);
-                return;
-            } catch (ActivityNotFoundException | SecurityException ignored) {
-                // The game may have become unavailable since the lookup.
-            }
-        }
-        Toast.makeText(this, R.string.ingress_unavailable, Toast.LENGTH_SHORT).show();
     }
 
     private LinearLayout card() {
